@@ -54,10 +54,10 @@
       font-size: 0.95rem;
     }
     .slider-output {
-      grid-column: span 2;
+      grid-column: span 1;
     }
     .slider-alpha {
-      grid-column: span 1;
+      grid-column: span 2;
     }
     .value-display {
       font-size: 0.85rem;
@@ -142,19 +142,16 @@
       <!-- Automation & alpha sliders -->
       <div class="sliders">
         <!-- ROW 1: Output + alpha -->
-        <div class="slider-group slider-output">
-          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)<br>
-            <span style="font-size: 0.8rem; color: #777;">
-              Has to be &gt; 0 for increase in multiplier
-            </span></label>
-          <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
-          <div class="value-display">Current: <span id="fY-value">0</span></div>
-        </div>
-
         <div class="slider-group slider-alpha">
           <label for="alpha">Labor Share (α)</label>
           <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
           <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
+        </div>
+
+        <div class="slider-group slider-output">
+          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)</label>
+          <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
+          <div class="value-display">Current: <span id="fY-value">0</span></div>
         </div>
 
         <!-- ROW 2: three tech sliders -->

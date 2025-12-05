@@ -117,8 +117,8 @@
     <div class="card">
       <h1>Balanced Growth Path Calculator</h1>
       <p class="subtitle">
-        Adjust the automation parameters <strong>f<sub>Y</sub></strong>, <strong>f<sub>z</sub></strong>, 
-        <strong>f<sub>A</sub></strong>, <strong>f<sub>h</sub></strong>, and labor share <strong>α</strong>.<br/>
+        Adjust the automation parameters <strong>f<sub>Y</sub></strong>, <strong>f<sub>S</sub></strong>, 
+        <strong>f<sub>A</sub></strong>, <strong>f<sub>H</sub></strong>, and labor share <strong>α</strong>.<br/>
         Optionally edit the returns to research. The app computes the per-capita growth ratio
         relative to the no-automation case (with the same returns to research).
       </p>
@@ -144,7 +144,7 @@
         </div>
 
         <div class="slider-group">
-          <label for="fh">% Automation of Hardware Research Tasks (f<sub>h</sub>)</label>
+          <label for="fh">% Automation of Hardware Research Tasks (f<sub>H</sub>)</label>
           <input type="range" id="fh" min="0" max="1" step="0.001" value="0" />
           <div class="value-display">Current: <span id="fh-value">0</span></div>
         </div>
@@ -167,13 +167,13 @@
       <!-- Returns to research sliders (hidden until checkbox is checked) -->
       <div id="returns-sliders" class="sliders" style="display:none; margin-top:8px;">
         <div class="slider-group">
-          <label for="rz">Return to Software Research (r<sub>z</sub>)</label>
+          <label for="rz">Return to Software Research (r<sub>S</sub>)</label>
           <input type="range" id="rz" min="0" max="10" step="0.01" value="1.00" />
           <div class="value-display">Current: <span id="rz-value">1.00</span></div>
         </div>
 
         <div class="slider-group">
-          <label for="rh">Return to Hardware Research (r<sub>h</sub>)</label>
+          <label for="rh">Return to Hardware Research (r<sub>H</sub>)</label>
           <input type="range" id="rh" min="0" max="10" step="0.01" value="5.00" />
           <div class="value-display">Current: <span id="rh-value">5.00</span></div>
         </div>
@@ -195,7 +195,7 @@
         </div>
 
         <div class="footer">
-          By default, returns to research are fixed at: r<sub>z</sub> = 1, r<sub>h</sub> = 5, r<sub>A</sub> = 0.32.
+          By default, returns to research are fixed at: r<sub>S</sub> = 1, r<sub>H</sub> = 5, r<sub>A</sub> = 0.32.
           Tick “Edit Returns to Research” to change them.
         </div>
       </div>

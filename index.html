@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Balanced Growth Path Calculator DHHK</title>
+  <title>Balanced Growth Path Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -60,17 +60,12 @@
     input[type="range"] {
       width: 100%;
     }
-    .results {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 18px;
-      margin-top: 10px;
-    }
     .result-box {
       border-radius: 10px;
       padding: 12px 14px;
       background: #fafafa;
       border: 1px solid #e0e0e0;
+      margin-top: 12px;
     }
     .result-title {
       font-size: 0.9rem;
@@ -80,8 +75,8 @@
       margin-bottom: 4px;
     }
     .result-value {
-      font-size: 1.05rem;
-      font-weight: 600;
+      font-size: 1.3rem;
+      font-weight: 700;
     }
     .ok-status {
       margin-top: 12px;
@@ -118,9 +113,9 @@
       <h1>Balanced Growth Path Calculator</h1>
       <p class="subtitle">
         Adjust the automation parameters <strong>f<sub>Y</sub></strong>, <strong>f<sub>z</sub></strong>, 
-        <strong>f<sub>A</sub></strong>, and <strong>f<sub>h</sub></strong> (between 0 and 1).<br/>
-        The app computes the per-capita growth rate <code>gy2</code> and compares it to the
-        baseline where all <code>f</code> values are zero.
+        <strong>f<sub>A</sub></strong>, <strong>f<sub>h</sub></strong>, and capital share <strong>α</strong>.<br/>
+        The app computes the per-capita growth ratio relative to the
+        no-automation case.
       </p>
 
       <div class="sliders">
@@ -147,42 +142,37 @@
           <input type="range" id="fh" min="0" max="1" step="0.001" value="0.043" />
           <div class="value-display">Current: <span id="fh-value">0.043</span></div>
         </div>
+
+        <div class="slider-group">
+          <label for="alpha">α (capital share)</label>
+          <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
+          <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
+        </div>
       </div>
 
       <div class="card" style="margin-top:18px;">
         <h2>Results</h2>
         <div id="status" class="ok-status"></div>
 
-        <div class="results" id="results-grid">
-          <div class="result-box">
-            <div class="result-title">gy2 (current f values)</div>
-            <div class="result-value" id="gy2-current">–</div>
-          </div>
-          <div class="result-box">
-            <div class="result-title">gy2 (all f = 0)</div>
-            <div class="result-value" id="gy2-zero">–</div>
-          </div>
-          <div class="result-box">
-            <div class="result-title">Ratio: gy2 / gy2(f = 0)</div>
-            <div class="result-value" id="ratio">–</div>
-          </div>
+        <div class="result-box">
+          <div class="result-title">BGP Multiplier over no automation</div>
+          <div class="result-value" id="ratio">–</div>
         </div>
 
         <div class="footer">
-          Parameters fixed at: n = 0.01, r<sub>z</sub> = 1, r<sub>h</sub> = 5, r<sub>A</sub> = 0.32, α = 0.6
+          Other parameters fixed at: n = 0.01, r<sub>z</sub> = 1, r<sub>h</sub> = 5, r<sub>A</sub> = 0.32
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Fixed parameters
+    // Fixed parameters (alpha is controlled by slider)
     const params = {
       n: 0.01,
       rz: 1,
       rh: 5,
-      rA: 0.32,
-      alpha: 0.6
+      rA: 0.32
     };
 
     // Utility: 3x3 matrix inverse
@@ -232,9 +222,13 @@
       ];
     }
 
-    // Core: compute gy2 for given f's, following the MATLAB code
-    function computeGy2(fY, fz, fA, fh, p) {
-      const { n, rz, rh, rA, alpha } = p;
+    // Core: compute gy2 for given f's and alpha
+    function computeGy2(fY, fz, fA, fh, alpha, p) {
+      const { n, rz, rh, rA } = p;
+
+      if (alpha <= 0 || alpha >= 1) {
+        return { ok: false, value: NaN };
+      }
 
       // --- s-matrix elements ---
       const denom_s_h = (1 - fY) - rh * fh;
@@ -290,8 +284,6 @@
 
       const r_hL = -(rh * (1 - fh) * (1 - fY) * alpha / denom_r_common) / denom_rh;
       const r_zL = -(rz * (1 - fz) * (1 - fY) * alpha / denom_r_common) / denom_rz;
-      const denom_rA_common = 1 - (1 - fA) * alpha; // matches MATLAB structure logically
-      // Actually from your MATLAB: (1-(1-fA)*alpha) – we keep that consistent:
       const r_AL = -(rA * (1 - fA) * (1 - fY) * alpha / (1 - (1 - fA) * alpha)) / denom_rA;
 
       if (
@@ -317,7 +309,7 @@
         return { ok: false, value: NaN };
       }
 
-      const gY2 = g_A_BGP[3 - 1] * (1 / alpha) +
+      const gY2 = g_A_BGP[2] * (1 / alpha) +
                   (1 - fY) * n +
                   fY * (g_A_BGP[0] + g_A_BGP[1]);
 
@@ -331,16 +323,15 @@
     }
 
     // Hook up UI
-    const sliders = ["fY", "fz", "fA", "fh"];
+    const sliders = ["fY", "fz", "fA", "fh", "alpha"];
     const values = {
       fY: document.getElementById("fY-value"),
       fz: document.getElementById("fz-value"),
       fA: document.getElementById("fA-value"),
-      fh: document.getElementById("fh-value")
+      fh: document.getElementById("fh-value"),
+      alpha: document.getElementById("alpha-value")
     };
 
-    const gy2CurrentSpan = document.getElementById("gy2-current");
-    const gy2ZeroSpan = document.getElementById("gy2-zero");
     const ratioSpan = document.getElementById("ratio");
     const statusDiv = document.getElementById("status");
 
@@ -349,35 +340,47 @@
       const fz = parseFloat(document.getElementById("fz").value);
       const fA = parseFloat(document.getElementById("fA").value);
       const fh = parseFloat(document.getElementById("fh").value);
+      const alpha = parseFloat(document.getElementById("alpha").value);
 
       // Update displayed numeric values for sliders
       values.fY.textContent = fY.toFixed(3);
       values.fz.textContent = fz.toFixed(3);
       values.fA.textContent = fA.toFixed(3);
       values.fh.textContent = fh.toFixed(3);
+      values.alpha.textContent = alpha.toFixed(2);
 
       // Compute gy2 for current f's
-      const resCurrent = computeGy2(fY, fz, fA, fh, params);
-      // Compute gy2 for all f = 0 (benchmark)
-      const resZero = computeGy2(0, 0, 0, 0, params);
+      const resCurrent = computeGy2(fY, fz, fA, fh, alpha, params);
+      // Compute gy2 for all f = 0 (benchmark), same alpha
+      const resZero = computeGy2(0, 0, 0, 0, alpha, params);
 
-      const ok = resCurrent.ok && resZero.ok && resZero.value !== 0 && Number.isFinite(resZero.value);
+      let ratioOk = resCurrent.ok && resZero.ok && resZero.value !== 0 &&
+                    Number.isFinite(resZero.value) && Number.isFinite(resCurrent.value);
 
-      if (!ok) {
+      if (!ratioOk) {
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
+        ratioSpan.textContent = "–";
+        return;
+      }
 
-        gy2CurrentSpan.textContent = "NaN";
-        gy2ZeroSpan.textContent = "NaN";
-        ratioSpan.textContent = "NaN";
+      const ratio = resCurrent.value / resZero.value;
+
+      if (!Number.isFinite(ratio)) {
+        statusDiv.textContent = "System Explodes (no BGP)";
+        statusDiv.className = "ok-status error";
+        ratioSpan.textContent = "–";
+        return;
+      }
+
+      if (ratio < 0) {
+        // Negative ratio => explosive dynamics
+        statusDiv.textContent = "System has explosive dynamics (no BGP)";
+        statusDiv.className = "ok-status error";
+        ratioSpan.textContent = "-";
       } else {
         statusDiv.textContent = "System has a Balanced Growth Path.";
         statusDiv.className = "ok-status ok";
-
-        gy2CurrentSpan.textContent = resCurrent.value.toExponential(6);
-        gy2ZeroSpan.textContent = resZero.value.toExponential(6);
-
-        const ratio = resCurrent.value / resZero.value;
         ratioSpan.textContent = ratio.toFixed(4) + " ×";
       }
     }
@@ -392,3 +395,4 @@
   </script>
 </body>
 </html>
+

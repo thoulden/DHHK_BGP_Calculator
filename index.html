@@ -126,13 +126,16 @@
       <!-- Automation & alpha sliders -->
       <div class="sliders">
         <div class="slider-group">
-          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)</label>
+          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)<br>
+            <span style="font-size: 0.8rem; color: #777;">
+              Has to be &gt; 0 for increase in multiplier
+            </span></label>
           <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
           <div class="value-display">Current: <span id="fY-value">0</span></div>
         </div>
 
         <div class="slider-group">
-          <label for="fz">% Automation of Software Research Tasks (f<sub>z</sub>)</label>
+          <label for="fz">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
           <input type="range" id="fz" min="0" max="1" step="0.001" value="0" />
           <div class="value-display">Current: <span id="fz-value">0</span></div>
         </div>
@@ -190,7 +193,7 @@
         <div id="status" class="ok-status"></div>
 
         <div class="result-box">
-          <div class="result-title">BGP Multiplier over no automation</div>
+          <div class="result-title">Output BGP Multiplier over no automation</div>
           <div class="result-value" id="ratio">–</div>
         </div>
 

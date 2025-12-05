@@ -100,6 +100,11 @@
       font-size: 0.75rem;
       color: #777;
     }
+    .checkbox-row {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
     @media (max-width: 600px) {
       .card {
         padding: 16px 14px;
@@ -113,14 +118,15 @@
       <h1>Balanced Growth Path Calculator</h1>
       <p class="subtitle">
         Adjust the automation parameters <strong>f<sub>Y</sub></strong>, <strong>f<sub>z</sub></strong>, 
-        <strong>f<sub>A</sub></strong>, <strong>f<sub>h</sub></strong>, and capital share <strong>α</strong>.<br/>
-        The app computes the per-capita growth ratio relative to the
-        no-automation case.
+        <strong>f<sub>A</sub></strong>, <strong>f<sub>h</sub></strong>, and labor share <strong>α</strong>.<br/>
+        Optionally edit the returns to research. The app computes the per-capita growth ratio
+        relative to the no-automation case (with the same returns to research).
       </p>
 
+      <!-- Automation & alpha sliders -->
       <div class="sliders">
         <div class="slider-group">
-          <label for="fY">% Automation of Ouput Tasks (f<sub>Y</sub>)</label>
+          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)</label>
           <input type="range" id="fY" min="0" max="1" step="0.001" value="0.043" />
           <div class="value-display">Current: <span id="fY-value">0.043</span></div>
         </div>
@@ -150,6 +156,35 @@
         </div>
       </div>
 
+      <!-- Checkbox to edit returns to research -->
+      <div class="checkbox-row">
+        <label>
+          <input type="checkbox" id="editReturns" />
+          Edit Returns to Research
+        </label>
+      </div>
+
+      <!-- Returns to research sliders (hidden until checkbox is checked) -->
+      <div id="returns-sliders" class="sliders" style="display:none; margin-top:8px;">
+        <div class="slider-group">
+          <label for="rz">Return to Software Research (r<sub>z</sub>)</label>
+          <input type="range" id="rz" min="0" max="10" step="0.01" value="1.00" />
+          <div class="value-display">Current: <span id="rz-value">1.00</span></div>
+        </div>
+
+        <div class="slider-group">
+          <label for="rh">Return to Hardware Research (r<sub>h</sub>)</label>
+          <input type="range" id="rh" min="0" max="10" step="0.01" value="5.00" />
+          <div class="value-display">Current: <span id="rh-value">5.00</span></div>
+        </div>
+
+        <div class="slider-group">
+          <label for="rA">Return to TFP Research (r<sub>A</sub>)</label>
+          <input type="range" id="rA" min="0" max="10" step="0.01" value="0.32" />
+          <div class="value-display">Current: <span id="rA-value">0.32</span></div>
+        </div>
+      </div>
+
       <div class="card" style="margin-top:18px;">
         <h2>Results</h2>
         <div id="status" class="ok-status"></div>
@@ -160,15 +195,16 @@
         </div>
 
         <div class="footer">
-          Other parameters fixed at: n = 0.01, r<sub>z</sub> = 1, r<sub>h</sub> = 5, r<sub>A</sub> = 0.32
+          By default, returns to research are fixed at: r<sub>z</sub> = 1, r<sub>h</sub> = 5, r<sub>A</sub> = 0.32.
+          Tick “Edit Returns to Research” to change them.
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Fixed parameters (alpha is controlled by slider)
-    const params = {
+    // Base parameters (n fixed, rz/rh/rA can be edited)
+    const baseParams = {
       n: 0.01,
       rz: 1,
       rh: 5,
@@ -222,9 +258,9 @@
       ];
     }
 
-    // Core: compute gy2 for given f's and alpha
-    function computeGy2(fY, fz, fA, fh, alpha, p) {
-      const { n, rz, rh, rA } = p;
+    // Core: compute gy2 for given f's, alpha, and returns to research
+    function computeGy2(fY, fz, fA, fh, alpha, params) {
+      const { n, rz, rh, rA } = params;
 
       if (alpha <= 0 || alpha >= 1) {
         return { ok: false, value: NaN };
@@ -323,17 +359,22 @@
     }
 
     // Hook up UI
-    const sliders = ["fY", "fz", "fA", "fh", "alpha"];
+    const sliders = ["fY", "fz", "fA", "fh", "alpha", "rz", "rh", "rA"];
     const values = {
       fY: document.getElementById("fY-value"),
       fz: document.getElementById("fz-value"),
       fA: document.getElementById("fA-value"),
       fh: document.getElementById("fh-value"),
-      alpha: document.getElementById("alpha-value")
+      alpha: document.getElementById("alpha-value"),
+      rz: document.getElementById("rz-value"),
+      rh: document.getElementById("rh-value"),
+      rA: document.getElementById("rA-value")
     };
 
     const ratioSpan = document.getElementById("ratio");
     const statusDiv = document.getElementById("status");
+    const editReturnsCheckbox = document.getElementById("editReturns");
+    const returnsSlidersDiv = document.getElementById("returns-sliders");
 
     function update() {
       const fY = parseFloat(document.getElementById("fY").value);
@@ -342,17 +383,40 @@
       const fh = parseFloat(document.getElementById("fh").value);
       const alpha = parseFloat(document.getElementById("alpha").value);
 
-      // Update displayed numeric values for sliders
+      // Update displayed numeric values for automation & alpha
       values.fY.textContent = fY.toFixed(3);
       values.fz.textContent = fz.toFixed(3);
       values.fA.textContent = fA.toFixed(3);
       values.fh.textContent = fh.toFixed(3);
       values.alpha.textContent = alpha.toFixed(2);
 
+      // Decide which returns to research to use
+      const editReturns = editReturnsCheckbox.checked;
+      let rz = baseParams.rz;
+      let rh = baseParams.rh;
+      let rA = baseParams.rA;
+
+      if (editReturns) {
+        rz = parseFloat(document.getElementById("rz").value);
+        rh = parseFloat(document.getElementById("rh").value);
+        rA = parseFloat(document.getElementById("rA").value);
+
+        values.rz.textContent = rz.toFixed(2);
+        values.rh.textContent = rh.toFixed(2);
+        values.rA.textContent = rA.toFixed(2);
+      }
+
+      const paramSet = {
+        n: baseParams.n,
+        rz,
+        rh,
+        rA
+      };
+
       // Compute gy2 for current f's
-      const resCurrent = computeGy2(fY, fz, fA, fh, alpha, params);
-      // Compute gy2 for all f = 0 (benchmark), same alpha
-      const resZero = computeGy2(0, 0, 0, 0, alpha, params);
+      const resCurrent = computeGy2(fY, fz, fA, fh, alpha, paramSet);
+      // Compute gy2 for all f = 0 (benchmark), same r's and alpha
+      const resZero = computeGy2(0, 0, 0, 0, alpha, paramSet);
 
       let ratioOk = resCurrent.ok && resZero.ok && resZero.value !== 0 &&
                     Number.isFinite(resZero.value) && Number.isFinite(resCurrent.value);
@@ -387,7 +451,15 @@
 
     // Attach listeners
     sliders.forEach(id => {
-      document.getElementById(id).addEventListener("input", update);
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("input", update);
+      }
+    });
+
+    editReturnsCheckbox.addEventListener("change", () => {
+      returnsSlidersDiv.style.display = editReturnsCheckbox.checked ? "grid" : "none";
+      update();
     });
 
     // Initial computation
@@ -395,4 +467,5 @@
   </script>
 </body>
 </html>
+
 

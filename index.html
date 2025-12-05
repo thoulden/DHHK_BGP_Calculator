@@ -41,7 +41,7 @@
     }
     .sliders {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
       gap: 18px 24px;
     }
     .slider-group {
@@ -52,6 +52,12 @@
     .slider-group label {
       font-weight: 600;
       font-size: 0.95rem;
+    }
+    .slider-output {
+      grid-column: span 2;
+    }
+    .slider-alpha {
+      grid-column: span 1;
     }
     .value-display {
       font-size: 0.85rem;
@@ -111,9 +117,13 @@
       margin-bottom: 8px;
       font-size: 0.95rem;
     }
-    @media (max-width: 600px) {
-      .card {
-        padding: 16px 14px;
+    @media (max-width: 700px) {
+      .sliders {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .slider-output,
+      .slider-alpha {
+        grid-column: span 1;
       }
     }
   </style>
@@ -126,49 +136,46 @@
         Adjust the automation parameters <strong>f<sub>Y</sub></strong>, <strong>f<sub>S</sub></strong>, 
         <strong>f<sub>A</sub></strong>, <strong>f<sub>H</sub></strong>, and labor share <strong>α</strong>.<br/>
         Optionally edit the returns to research. The app computes balanced growth
-        relative to the no-automation case (with the same returns to research).
+        relative to the no-automation case (with the same returns to research and labor share).
       </p>
 
       <!-- Automation & alpha sliders -->
       <div class="sliders">
-  
-  <!-- Row 1: Output + Labor Share -->
-  <div class="slider-group" style="grid-column: span 1;">
-    <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)<br>
-      <span style="font-size: 0.8rem; color: #777;">
-        Has to be &gt; 0 for increase in multiplier
-      </span>
-    </label>
-    <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
-    <div class="value-display">Current: <span id="fY-value">0</span></div>
-  </div>
+        <!-- ROW 1: Output + alpha -->
+        <div class="slider-group slider-output">
+          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)<br>
+            <span style="font-size: 0.8rem; color: #777;">
+              Has to be &gt; 0 for increase in multiplier
+            </span></label>
+          <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
+          <div class="value-display">Current: <span id="fY-value">0</span></div>
+        </div>
 
-  <div class="slider-group" style="grid-column: span 1;">
-    <label for="alpha">Labor Share (α)</label>
-    <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
-    <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
-  </div>
+        <div class="slider-group slider-alpha">
+          <label for="alpha">Labor Share (α)</label>
+          <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
+          <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
+        </div>
 
-  <!-- Row 2: Three Technology Sliders -->
-  <div class="slider-group">
-    <label for="fz">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
-    <input type="range" id="fz" min="0" max="1" step="0.001" value="0" />
-    <div class="value-display">Current: <span id="fz-value">0</span></div>
-  </div>
+        <!-- ROW 2: three tech sliders -->
+        <div class="slider-group">
+          <label for="fz">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
+          <input type="range" id="fz" min="0" max="1" step="0.001" value="0" />
+          <div class="value-display">Current: <span id="fz-value">0</span></div>
+        </div>
 
-  <div class="slider-group">
-    <label for="fh">% Automation of Hardware Research Tasks (f<sub>H</sub>)</label>
-    <input type="range" id="fh" min="0" max="1" step="0.001" value="0" />
-    <div class="value-display">Current: <span id="fh-value">0</span></div>
-  </div>
+        <div class="slider-group">
+          <label for="fh">% Automation of Hardware Research Tasks (f<sub>H</sub>)</label>
+          <input type="range" id="fh" min="0" max="1" step="0.001" value="0" />
+          <div class="value-display">Current: <span id="fh-value">0</span></div>
+        </div>
 
-  <div class="slider-group">
-    <label for="fA">% Automation of TFP Research Tasks (f<sub>A</sub>)</label>
-    <input type="range" id="fA" min="0" max="1" step="0.001" value="0" />
-    <div class="value-display">Current: <span id="fA-value">0</span></div>
-  </div>
-
-</div>
+        <div class="slider-group">
+          <label for="fA">% Automation of TFP Research Tasks (f<sub>A</sub>)</label>
+          <input type="range" id="fA" min="0" max="1" step="0.001" value="0" />
+          <div class="value-display">Current: <span id="fA-value">0</span></div>
+        </div>
+      </div>
 
       <!-- Checkbox to edit returns to research -->
       <div class="checkbox-row">
@@ -365,6 +372,7 @@
         return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
+      // ordering: [hardware, software, TFP]
       const gY2 = g_A_BGP[2] * (1 / alpha) +
                   (1 - fY) * n +
                   fY * (g_A_BGP[0] + g_A_BGP[1]);
@@ -490,10 +498,11 @@
             if (!Number.isFinite(r) || r < 0) return "-";
             return r.toFixed(4) + " ×";
           };
+          // ordering: [hardware, software, TFP]
           setSubMultipliers(
             makeComp(1), // software
-            makeComp(0), // hardware
-            makeComp(2)  // TFP
+            makeComp(0) // hardware
+            //makeComp(2)  // TFP -- just same multiplier as output!
           );
         } else {
           setSubMultipliers("–", "–", "–");
@@ -519,5 +528,6 @@
   </script>
 </body>
 </html>
+
 
 

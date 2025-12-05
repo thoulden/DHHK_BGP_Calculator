@@ -41,7 +41,7 @@
     }
     .sliders {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 18px 24px;
     }
     .slider-group {
@@ -131,39 +131,44 @@
 
       <!-- Automation & alpha sliders -->
       <div class="sliders">
-        <div class="slider-group">
-          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)<br>
-            <span style="font-size: 0.8rem; color: #777;">
-              Has to be &gt; 0 for increase in multiplier
-            </span></label>
-          <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
-          <div class="value-display">Current: <span id="fY-value">0</span></div>
-        </div>
+  
+  <!-- Row 1: Output + Labor Share -->
+  <div class="slider-group" style="grid-column: span 1;">
+    <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)<br>
+      <span style="font-size: 0.8rem; color: #777;">
+        Has to be &gt; 0 for increase in multiplier
+      </span>
+    </label>
+    <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
+    <div class="value-display">Current: <span id="fY-value">0</span></div>
+  </div>
 
-        <div class="slider-group">
-          <label for="fz">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
-          <input type="range" id="fz" min="0" max="1" step="0.001" value="0" />
-          <div class="value-display">Current: <span id="fz-value">0</span></div>
-        </div>
+  <div class="slider-group" style="grid-column: span 1;">
+    <label for="alpha">Labor Share (α)</label>
+    <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
+    <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
+  </div>
 
-        <div class="slider-group">
-          <label for="fA">% Automation of TFP Research Tasks (f<sub>A</sub>)</label>
-          <input type="range" id="fA" min="0" max="1" step="0.001" value="0" />
-          <div class="value-display">Current: <span id="fA-value">0</span></div>
-        </div>
+  <!-- Row 2: Three Technology Sliders -->
+  <div class="slider-group">
+    <label for="fz">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
+    <input type="range" id="fz" min="0" max="1" step="0.001" value="0" />
+    <div class="value-display">Current: <span id="fz-value">0</span></div>
+  </div>
 
-        <div class="slider-group">
-          <label for="fh">% Automation of Hardware Research Tasks (f<sub>H</sub>)</label>
-          <input type="range" id="fh" min="0" max="1" step="0.001" value="0" />
-          <div class="value-display">Current: <span id="fh-value">0</span></div>
-        </div>
+  <div class="slider-group">
+    <label for="fh">% Automation of Hardware Research Tasks (f<sub>H</sub>)</label>
+    <input type="range" id="fh" min="0" max="1" step="0.001" value="0" />
+    <div class="value-display">Current: <span id="fh-value">0</span></div>
+  </div>
 
-        <div class="slider-group">
-          <label for="alpha">Labor Share (α)</label>
-          <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
-          <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
-        </div>
-      </div>
+  <div class="slider-group">
+    <label for="fA">% Automation of TFP Research Tasks (f<sub>A</sub>)</label>
+    <input type="range" id="fA" min="0" max="1" step="0.001" value="0" />
+    <div class="value-display">Current: <span id="fA-value">0</span></div>
+  </div>
+
+</div>
 
       <!-- Checkbox to edit returns to research -->
       <div class="checkbox-row">

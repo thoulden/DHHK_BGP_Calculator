@@ -78,6 +78,12 @@
       font-size: 1.3rem;
       font-weight: 700;
     }
+    .result-sub {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.4;
+    }
     .ok-status {
       margin-top: 12px;
       padding: 10px 12px;
@@ -195,6 +201,11 @@
         <div class="result-box">
           <div class="result-title">Output BGP Multiplier over no automation</div>
           <div class="result-value" id="ratio">–</div>
+          <div class="result-sub">
+            Software Multiplier: <span id="soft-mult">–</span><br>
+            Hardware Multiplier: <span id="hard-mult">–</span><br>
+            TFP Multiplier: <span id="tfp-mult">–</span>
+          </div>
         </div>
 
         <div class="footer">
@@ -262,11 +273,12 @@
     }
 
     // Core: compute gy2 for given f's, alpha, and returns to research
+    // Also return full g_A_BGP vector
     function computeGy2(fY, fz, fA, fh, alpha, params) {
       const { n, rz, rh, rA } = params;
 
       if (alpha <= 0 || alpha >= 1) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
       // --- s-matrix elements ---
@@ -275,7 +287,7 @@
       const denom_s_A = (1 - fY) * alpha - rA * fA;
 
       if (Math.abs(denom_s_h) < 1e-14 || Math.abs(denom_s_z) < 1e-14 || Math.abs(denom_s_A) < 1e-14) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
       const s_hz = rh * fh / denom_s_h;
@@ -302,7 +314,7 @@
 
       const invRes = invert3x3(IminusF);
       if (!invRes.ok) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
       const Psi = invRes.inv;
 
@@ -318,7 +330,7 @@
         Math.abs(denom_rz) < 1e-14 ||
         Math.abs(denom_rA) < 1e-14
       ) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
       const r_hL = -(rh * (1 - fh) * (1 - fY) * alpha / denom_r_common) / denom_rh;
@@ -330,7 +342,7 @@
         !Number.isFinite(r_zL) ||
         !Number.isFinite(r_AL)
       ) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
       const rVec = [r_hL, r_zL, r_AL];
@@ -345,7 +357,7 @@
       const g_A_BGP = matVec3x3(Psi, r_circle_n);
 
       if (!g_A_BGP.every(Number.isFinite)) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
       const gY2 = g_A_BGP[2] * (1 / alpha) +
@@ -355,10 +367,11 @@
       const gy2 = gY2 - n;
 
       if (!Number.isFinite(gy2)) {
-        return { ok: false, value: NaN };
+        return { ok: false, value: NaN, gy2: NaN, gA: null };
       }
 
-      return { ok: true, value: gy2 };
+      // keep .value for backwards compatibility
+      return { ok: true, value: gy2, gy2, gA: g_A_BGP };
     }
 
     // Hook up UI
@@ -375,9 +388,18 @@
     };
 
     const ratioSpan = document.getElementById("ratio");
+    const softSpan = document.getElementById("soft-mult");
+    const hardSpan = document.getElementById("hard-mult");
+    const tfpSpan  = document.getElementById("tfp-mult");
     const statusDiv = document.getElementById("status");
     const editReturnsCheckbox = document.getElementById("editReturns");
     const returnsSlidersDiv = document.getElementById("returns-sliders");
+
+    function setSubMultipliers(soft, hard, tfp) {
+      softSpan.textContent = soft;
+      hardSpan.textContent = hard;
+      tfpSpan.textContent  = tfp;
+    }
 
     function update() {
       const fY = parseFloat(document.getElementById("fY").value);
@@ -428,6 +450,7 @@
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
         ratioSpan.textContent = "–";
+        setSubMultipliers("–", "–", "–");
         return;
       }
 
@@ -437,6 +460,7 @@
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
         ratioSpan.textContent = "–";
+        setSubMultipliers("–", "–", "–");
         return;
       }
 
@@ -445,10 +469,30 @@
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
         ratioSpan.textContent = "-";
+        setSubMultipliers("-", "-", "-");
       } else {
         statusDiv.textContent = "System has a Balanced Growth Path.";
         statusDiv.className = "ok-status ok";
         ratioSpan.textContent = ratio.toFixed(4) + " ×";
+
+        // Component multipliers from g_A_BGP
+        if (resCurrent.gA && resZero.gA) {
+          const makeComp = (idx) => {
+            const num = resCurrent.gA[idx];
+            const den = resZero.gA[idx];
+            if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) return "–";
+            const r = num / den;
+            if (!Number.isFinite(r) || r < 0) return "-";
+            return r.toFixed(4) + " ×";
+          };
+          setSubMultipliers(
+            makeComp(0), // software
+            makeComp(1), // hardware
+            makeComp(2)  // TFP
+          );
+        } else {
+          setSubMultipliers("–", "–", "–");
+        }
       }
     }
 

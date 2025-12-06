@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect x="0" y="0" width="64" height="64" fill="white"/>
+
+  <!-- Axes -->
+  <line x1="10" y1="54" x2="58" y2="54" stroke="#555" stroke-width="2" />
+  <line x1="10" y1="54" x2="10" y2="10" stroke="#555" stroke-width="2" />
+
+  <!-- Green linear BGP line -->
+  <line x1="12" y1="50" x2="56" y2="24" stroke="#2ca24f" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Red explosive, hyperbolic-looking curve -->
+  <!-- Stays low for most of the x-range, then shoots up near the right edge -->
+  <path d="
+    M 12 50
+    C 24 50, 32 48, 40 44
+    C 48 40, 54 32, 58 12
+  "
+    fill="none"
+    stroke="#d62828"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+</svg>

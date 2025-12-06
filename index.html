@@ -262,7 +262,8 @@
           <div class="result-value" id="ratio">–</div>
           <div class="result-sub">
             Software Multiplier: <span id="soft-mult">–</span><br>
-            Hardware Multiplier: <span id="hard-mult">–</span>
+            Hardware Multiplier: <span id="hard-mult">–</span><br>
+            TFP Multiplier: <span id="tfp-mult">–</span>
           </div>
         </div>
 
@@ -459,9 +460,9 @@
     const returnsSlidersDiv   = document.getElementById("returns-sliders");
 
     function setSubMultipliers(soft, hard, tfp) {
-      softSpan.textContent = soft;
-      hardSpan.textContent = hard;
-      tfpSpan.textContent  = tfp;
+      if (softSpan) softSpan.textContent = soft;
+      if (hardSpan) hardSpan.textContent = hard;
+      if (tfpSpan)  tfpSpan.textContent  = tfp;
     }
 
     // Generic multiplier formatter (when math is defined)
@@ -499,7 +500,7 @@
 
     function explosionMultipliers(fY, fS, fH, fTFP) {
       // When the system truly explodes (no BGP, inverse fails):
-      // Apply your "fi=0 => multiplier=1" rule; otherwise ∞ ×.
+      // Apply "fi=0 => multiplier=1" rule; otherwise ∞ ×.
       let outputMult, softMult, hardMult, tfpMult;
 
       if (fY === 0 && !(fTFP > 0 && fY === 0)) {
@@ -614,5 +615,6 @@
   </script>
 </body>
 </html>
+
 
 

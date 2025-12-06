@@ -331,30 +331,39 @@
       ];
     }
 
-    // Core: compute gy2 for given f's, alpha, and returns to research (Section 5 structure)
+    // Core: compute gy2 for given f's, alpha, and returns to research
     // Order of sectors: [Software (S); Hardware (H); TFP (A)]
     function computeGy2(fY, fz, fA, fh, alpha, params) {
-      const { n, rS, rH, rA } = params;
+      const n  = params.n;
+      const rS = params.rS;
+      const rH = params.rH;
+      const rA = params.rA;
 
-      const fS = fz;   // software
-      const fH = fh;   // hardware
-      const fTFP = fA; // TFP
+      const fS   = fz;    // software
+      const fH   = fh;    // hardware
+      const fTFP = fA;    // TFP
 
       if (alpha <= 0 || alpha >= 1) {
         return { ok: false, value: NaN, gA: null };
       }
 
-      const r = [rS, rH, rA];           // baseline returns
-      const fVec = [fS, fH, fTFP];      // research automation
-      const sigma = [1, 1, 0];          // relevance for AI capabilities
-      const tau = [0, 0, 1];            // tech contributions to TFP
+      const r     = [rS, rH, rA];      // baseline returns
+      const fVec  = [fS, fH, fTFP];    // research automation
+      const sigma = [1, 1, 0];         // relevance for AI capabilities
+      const tau   = [0, 0, 1];         // tech contributions to TFP
 
       // 1. Automation-adjusted returns r_hat
-      const denom_rhat = r.map((ri, i) => 1 - fVec[i] * sigma[i] * ri);
-      if (denom_rhat.some(x => x <= 0 || !Number.isFinite(x))) {
-        return { ok: false, value: NaN, gA: null };
+      const denom_rhat = [];
+      for (let i = 0; i < 3; i++) {
+        denom_rhat[i] = 1 - fVec[i] * sigma[i] * r[i];
+        if (!Number.isFinite(denom_rhat[i]) || denom_rhat[i] <= 0) {
+          return { ok: false, value: NaN, gA: null };
+        }
       }
-      const rHat = r.map((ri, i) => ri / denom_rhat[i]);
+      const rHat = [];
+      for (let i = 0; i < 3; i++) {
+        rHat[i] = r[i] / denom_rhat[i];
+      }
 
       // 2. Technological spillovers F_A
       const F_A = [
@@ -381,7 +390,10 @@
         return { ok: false, value: NaN, gA: null };
       }
 
-      const dgY_dgA = tau.map((tj, j) => tj / alphaEff + (fY / oneMinusFY) * sigma[j]);
+      const dgY_dgA = [];
+      for (let j = 0; j < 3; j++) {
+        dgY_dgA[j] = tau[j] / alphaEff + (fY / oneMinusFY) * sigma[j];
+      }
 
       const F_Y = [
         [0, 0, 0],
@@ -414,7 +426,7 @@
       }
       const Psi = invRes.inv;
 
-      const rHatTimesN = rHat.map(x => x * n);
+      const rHatTimesN = [rHat[0] * n, rHat[1] * n, rHat[2] * n];
       const gA_BGP = matVec3x3(Psi, rHatTimesN);
 
       if (!gA_BGP.every(Number.isFinite)) {
@@ -422,7 +434,10 @@
       }
 
       // 5. Output growth and per-capita gy
-      const tauEff = tau.map((tj, j) => tj + fY * sigma[j]);
+      const tauEff = [];
+      for (let j = 0; j < 3; j++) {
+        tauEff[j] = tau[j] + fY * sigma[j];
+      }
       let tauDotgA = 0;
       for (let j = 0; j < 3; j++) {
         tauDotgA += tauEff[j] * gA_BGP[j];
@@ -438,8 +453,10 @@
       return { ok: true, value: gy2, gA: gA_BGP };
     }
 
-    // Hook up UI
+    // ------- UI / multipliers logic ---------
+
     const sliders = ["fY", "fz", "fA", "fh", "alpha", "rz", "rh", "rA"];
+
     const values = {
       fY: document.getElementById("fY-value"),
       fz: document.getElementById("fz-value"),
@@ -460,60 +477,19 @@
     const returnsSlidersDiv   = document.getElementById("returns-sliders");
 
     function setSubMultipliers(soft, hard, tfp) {
-      if (softSpan) softSpan.textContent = soft;
-      if (hardSpan) hardSpan.textContent = hard;
-      if (tfpSpan)  tfpSpan.textContent  = tfp;
+      softSpan.textContent = soft;
+      hardSpan.textContent = hard;
+      tfpSpan.textContent  = tfp;
     }
 
-    // Generic multiplier formatter (when math is defined)
     function formatMultiplier(num, den) {
       if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) {
         return "∞ ×";
       }
       const r = num / den;
-      if (!Number.isFinite(r)) {
-        return "∞ ×";
-      }
-      if (r < 0) {
-        return "-";
-      }
+      if (!Number.isFinite(r)) return "∞ ×";
+      if (r < 0) return "-";
       return r.toFixed(4) + " ×";
-    }
-
-    function applyZeroFRules(fY, fS, fH, fTFP, outputMult, softMult, hardMult, tfpMult) {
-      // If f_i = 0, force multiplier to 1.0000 ×
-      // Exception: if fA > 0 and fY = 0, output multiplier may change.
-      if (fY === 0 && !(fTFP > 0 && fY === 0)) {
-        outputMult = "1.0000 ×";
-      }
-      if (fS === 0) {
-        softMult = "1.0000 ×";
-      }
-      if (fH === 0) {
-        hardMult = "1.0000 ×";
-      }
-      if (fTFP === 0) {
-        tfpMult = "1.0000 ×";
-      }
-      return { outputMult, softMult, hardMult, tfpMult };
-    }
-
-    function explosionMultipliers(fY, fS, fH, fTFP) {
-      // When the system truly explodes (no BGP, inverse fails):
-      // Apply "fi=0 => multiplier=1" rule; otherwise ∞ ×.
-      let outputMult, softMult, hardMult, tfpMult;
-
-      if (fY === 0 && !(fTFP > 0 && fY === 0)) {
-        outputMult = "1.0000 ×";
-      } else {
-        outputMult = "∞ ×";
-      }
-
-      softMult = (fS === 0) ? "1.0000 ×" : "∞ ×";
-      hardMult = (fH === 0) ? "1.0000 ×" : "∞ ×";
-      tfpMult  = (fTFP === 0) ? "1.0000 ×" : "∞ ×";
-
-      return { outputMult, softMult, hardMult, tfpMult };
     }
 
     function update() {
@@ -527,14 +503,14 @@
       const fH   = fh;
       const fTFP = fA;
 
-      // Update displayed numeric values for automation & alpha
+      // Update slider text
       values.fY.textContent = (fY * 100).toFixed(1) + "%";
       values.fz.textContent = (fz * 100).toFixed(1) + "%";
       values.fA.textContent = (fA * 100).toFixed(1) + "%";
       values.fh.textContent = (fh * 100).toFixed(1) + "%";
       values.alpha.textContent = alpha.toFixed(2);
 
-      // Decide which returns to research to use
+      // Returns to research
       const editReturns = editReturnsCheckbox.checked;
       let rS = baseParams.rS;
       let rH = baseParams.rH;
@@ -550,62 +526,79 @@
         values.rA.textContent = rA.toFixed(2);
       }
 
-      const paramSet = {
-        n: baseParams.n,
-        rS,
-        rH,
-        rA
-      };
+      const paramSet = { n: baseParams.n, rS: rS, rH: rH, rA: rA };
 
-      // Compute gy2 & gA for current f's and for f=0 benchmark
       const resCurrent = computeGy2(fY, fz, fA, fh, alpha, paramSet);
       const resZero    = computeGy2(0, 0, 0, 0, alpha, paramSet);
 
-      // If either solve fails (no BGP at all), use manual explosion rules.
-      if (!resCurrent.ok || !resZero.ok || !Number.isFinite(resCurrent.value) || !Number.isFinite(resZero.value)) {
+      // CASE 1: no BGP / math fails anywhere
+      if (!resCurrent.ok || !resZero.ok ||
+          !Number.isFinite(resCurrent.value) ||
+          !Number.isFinite(resZero.value)) {
+
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
 
-        const { outputMult, softMult, hardMult, tfpMult } =
-          explosionMultipliers(fY, fS, fH, fTFP);
+        // Apply your manual rules:
+        // f_i = 0 => multiplier = 1.0000 ×
+        // else => ∞ ×
+        // Exception: if fA > 0 and fY = 0, output can vary (here: ∞ ×).
+        let outMult, softMult, hardMult, tfpMult;
 
-        ratioSpan.textContent = outputMult;
+        if (fY === 0 && !(fTFP > 0 && fY === 0)) {
+          outMult = "1.0000 ×";
+        } else {
+          outMult = "∞ ×";
+        }
+        softMult = (fS === 0)   ? "1.0000 ×" : "∞ ×";
+        hardMult = (fH === 0)   ? "1.0000 ×" : "∞ ×";
+        tfpMult  = (fTFP === 0) ? "1.0000 ×" : "∞ ×";
+
+        ratioSpan.textContent = outMult;
         setSubMultipliers(softMult, hardMult, tfpMult);
         return;
       }
 
-      // Normal BGP case: compute ratios, then enforce fi=0 rules.
-      let outputMult = formatMultiplier(resCurrent.value, resZero.value);
-      let softMult = "–", hardMult = "–", tfpMult = "–";
+      // CASE 2: BGP exists -> compute ratios
+      let outMult = formatMultiplier(resCurrent.value, resZero.value);
+      let softMult = "–";
+      let hardMult = "–";
+      let tfpMult  = "–";
 
       if (resCurrent.gA && resZero.gA) {
-        softMult = formatMultiplier(resCurrent.gA[0], resZero.gA[0]); // S
-        hardMult = formatMultiplier(resCurrent.gA[1], resZero.gA[1]); // H
-        tfpMult  = formatMultiplier(resCurrent.gA[2], resZero.gA[2]); // A
+        softMult = formatMultiplier(resCurrent.gA[0], resZero.gA[0]);
+        hardMult = formatMultiplier(resCurrent.gA[1], resZero.gA[1]);
+        tfpMult  = formatMultiplier(resCurrent.gA[2], resZero.gA[2]);
       }
 
-      // Apply your "fi=0 => 1.0000 ×" rule (with the fA>0 & fY=0 exception for output)
-      ({ outputMult, softMult, hardMult, tfpMult } =
-        applyZeroFRules(fY, fS, fH, fTFP, outputMult, softMult, hardMult, tfpMult));
+      // Apply fi = 0 rules:
+      // - If fS = 0 => software multiplier 1.0000 ×
+      // - If fH = 0 => hardware multiplier 1.0000 ×
+      // - If fTFP = 0 => TFP multiplier 1.0000 ×
+      // - If fY = 0 and NOT (fA > 0) => output multiplier 1.0000 ×
+      if (fS === 0)   softMult = "1.0000 ×";
+      if (fH === 0)   hardMult = "1.0000 ×";
+      if (fTFP === 0) tfpMult  = "1.0000 ×";
+      if (fY === 0 && !(fTFP > 0 && fY === 0)) {
+        outMult = "1.0000 ×";
+      }
 
-      // In the BGP case we just declare the system balanced.
       statusDiv.textContent = "System has a Balanced Growth Path.";
       statusDiv.className = "ok-status ok";
 
-      ratioSpan.textContent = outputMult;
+      ratioSpan.textContent = outMult;
       setSubMultipliers(softMult, hardMult, tfpMult);
     }
 
     // Attach listeners
-    const sliders = ["fY", "fz", "fA", "fh", "alpha", "rz", "rh", "rA"];
-    sliders.forEach(id => {
+    sliders.forEach(function (id) {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener("input", update);
       }
     });
 
-    editReturnsCheckbox.addEventListener("change", () => {
+    editReturnsCheckbox.addEventListener("change", function () {
       returnsSlidersDiv.style.display = editReturnsCheckbox.checked ? "grid" : "none";
       update();
     });

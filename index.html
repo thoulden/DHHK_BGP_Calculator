@@ -283,15 +283,15 @@
   </div>
 
   <script>
-    // Base parameters (n fixed, rS/rH/rA can be edited)
+    // Base parameters
     const baseParams = {
       n: 0.01,
-      rS: 1,   // software
-      rH: 5,   // hardware
-      rA: 0.32 // TFP
+      rS: 1,
+      rH: 5,
+      rA: 0.32
     };
 
-    // Utility: 3x3 matrix inverse
+    // Matrix helpers
     function invert3x3(m) {
       const a = m[0][0], b = m[0][1], c = m[0][2];
       const d = m[1][0], e = m[1][1], f = m[1][2];
@@ -329,7 +329,6 @@
       return { ok: true, inv };
     }
 
-    // Utility: multiply 3x3 by 3x1
     function matVec3x3(m, v) {
       return [
         m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
@@ -338,28 +337,27 @@
       ];
     }
 
-    // Core: compute gy2 for given f's, alpha, and returns to research
-    // Order of sectors: [Software (S); Hardware (H); TFP (A)]
+    // Core economics
     function computeGy2(fY, fz, fA, fh, alpha, params) {
       const n  = params.n;
       const rS = params.rS;
       const rH = params.rH;
       const rA = params.rA;
 
-      const fS   = fz;    // software
-      const fH   = fh;    // hardware
-      const fTFP = fA;    // TFP
+      const fS   = fz;
+      const fH   = fh;
+      const fTFP = fA;
 
       if (alpha <= 0 || alpha >= 1) {
         return { ok: false, value: NaN, gA: null };
       }
 
-      const r     = [rS, rH, rA];      // baseline returns
-      const fVec  = [fS, fH, fTFP];    // research automation
-      const sigma = [1, 1, 0];         // relevance for AI capabilities
-      const tau   = [0, 0, 1];         // tech contributions to TFP
+      const r     = [rS, rH, rA];
+      const fVec  = [fS, fH, fTFP];
+      const sigma = [1, 1, 0];
+      const tau   = [0, 0, 1];
 
-      // 1. Automation-adjusted returns r_hat
+      // 1. r_hat
       const denom_rhat = [];
       for (let i = 0; i < 3; i++) {
         denom_rhat[i] = 1 - fVec[i] * sigma[i] * r[i];
@@ -372,7 +370,7 @@
         rHat[i] = r[i] / denom_rhat[i];
       }
 
-      // 2. Technological spillovers F_A
+      // 2. F_A
       const F_A = [
         [0, 0, 0],
         [0, 0, 0],
@@ -386,7 +384,7 @@
         }
       }
 
-      // 3. Economic feedback matrix F_Y
+      // 3. F_Y
       const oneMinusFY = 1 - fY;
       if (oneMinusFY <= 0) {
         return { ok: false, value: NaN, gA: null };
@@ -414,7 +412,7 @@
         }
       }
 
-      // 4. Leontief inverse & BGP tech growth
+      // 4. Leontief inverse & g_A
       const F = [
         [F_A[0][0] + F_Y[0][0], F_A[0][1] + F_Y[0][1], F_A[0][2] + F_Y[0][2]],
         [F_A[1][0] + F_Y[1][0], F_A[1][1] + F_Y[1][1], F_A[1][2] + F_Y[1][2]],
@@ -440,7 +438,7 @@
         return { ok: false, value: NaN, gA: null };
       }
 
-      // 5. Output growth and per-capita gy
+      // 5. gY and gy
       const tauEff = [];
       for (let j = 0; j < 3; j++) {
         tauEff[j] = tau[j] + fY * sigma[j];
@@ -460,7 +458,7 @@
       return { ok: true, value: gy2, gA: gA_BGP };
     }
 
-    // ------- UI / multipliers logic ---------
+    // --- UI wiring ---
 
     const values = {
       fY: document.getElementById("fY-value"),
@@ -486,28 +484,28 @@
       hardSpan.textContent = hard;
     }
 
+    // In BGP case, we never show "∞ ×" now; undefined/odd stuff becomes "-"
     function formatMultiplier(num, den) {
       if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) {
-        return "∞ ×";
+        return "-";
       }
       const r = num / den;
-      if (!Number.isFinite(r)) return "∞ ×";
-      if (r < 0) return "-";
+      if (!Number.isFinite(r) || r < 0) return "-";
       return r.toFixed(4) + " ×";
     }
 
     function update() {
       const fY    = parseFloat(document.getElementById("fY").value);
-      const fz    = parseFloat(document.getElementById("fz").value);  // software
-      const fA    = parseFloat(document.getElementById("fA").value);  // TFP
-      const fh    = parseFloat(document.getElementById("fh").value);  // hardware
+      const fz    = parseFloat(document.getElementById("fz").value);
+      const fA    = parseFloat(document.getElementById("fA").value);
+      const fh    = parseFloat(document.getElementById("fh").value);
       const alpha = parseFloat(document.getElementById("alpha").value);
 
       const fS   = fz;
       const fH   = fh;
       const fTFP = fA;
 
-      // Update slider text
+      // Update slider labels
       values.fY.textContent = (fY * 100).toFixed(1) + "%";
       values.fz.textContent = (fz * 100).toFixed(1) + "%";
       values.fA.textContent = (fA * 100).toFixed(1) + "%";
@@ -535,7 +533,7 @@
       const resCurrent = computeGy2(fY, fz, fA, fh, alpha, paramSet);
       const resZero    = computeGy2(0, 0, 0, 0, alpha, paramSet);
 
-      // CASE 1: no BGP / math fails anywhere
+      // 1) hard failure: no BGP or gy not finite
       if (!resCurrent.ok || !resZero.ok ||
           !Number.isFinite(resCurrent.value) ||
           !Number.isFinite(resZero.value)) {
@@ -543,12 +541,7 @@
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
 
-        // Manual rules:
-        // f_i = 0 => multiplier = 1.0000 ×
-        // else => ∞ ×
-        // Exception: if fA > 0 and fY = 0, output can vary (here: ∞ ×).
         let outMult, softMult, hardMult;
-
         if (fY === 0 && !(fTFP > 0 && fY === 0)) {
           outMult = "1.0000 ×";
         } else {
@@ -562,21 +555,37 @@
         return;
       }
 
-      // CASE 2: BGP exists -> compute ratios
-      let outMult = formatMultiplier(resCurrent.value, resZero.value);
+      // 2) check output ratio sign – negative or non-finite => treat as explosion
+      const rawOutRatio = resCurrent.value / resZero.value;
+      if (!Number.isFinite(rawOutRatio) || rawOutRatio < 0) {
+        statusDiv.textContent = "System Explodes (no BGP)";
+        statusDiv.className = "ok-status error";
+
+        let outMult, softMult, hardMult;
+        if (fY === 0 && !(fTFP > 0 && fY === 0)) {
+          outMult = "1.0000 ×";
+        } else {
+          outMult = "∞ ×";
+        }
+        softMult = (fS === 0) ? "1.0000 ×" : "∞ ×";
+        hardMult = (fH === 0) ? "1.0000 ×" : "∞ ×";
+
+        ratioSpan.textContent = outMult;
+        setSubMultipliers(softMult, hardMult);
+        return;
+      }
+
+      // 3) BGP case
+      let outMult = rawOutRatio.toFixed(4) + " ×";
       let softMult = "–";
       let hardMult = "–";
 
       if (resCurrent.gA && resZero.gA) {
         softMult = formatMultiplier(resCurrent.gA[0], resZero.gA[0]);
         hardMult = formatMultiplier(resCurrent.gA[1], resZero.gA[1]);
-        // TFP multiplier exists in theory but is not displayed.
       }
 
-      // Apply fi = 0 rules:
-      // - If fS = 0 => software multiplier 1.0000 ×
-      // - If fH = 0 => hardware multiplier 1.0000 ×
-      // - If fY = 0 and NOT (fA > 0) => output multiplier 1.0000 ×
+      // fi = 0 rules in BGP
       if (fS === 0)   softMult = "1.0000 ×";
       if (fH === 0)   hardMult = "1.0000 ×";
       if (fY === 0 && !(fTFP > 0 && fY === 0)) {
@@ -590,9 +599,8 @@
       setSubMultipliers(softMult, hardMult);
     }
 
-    // --- slider listeners ---
+    // --- slider listeners, including "Move all f together" ---
 
-    // Helper: when "Move all f together" is on, moving any f slider syncs them all
     function attachFSliderSync(id) {
       const el = document.getElementById(id);
       if (!el) return;
@@ -613,7 +621,6 @@
     attachFSliderSync("fh");
     attachFSliderSync("fA");
 
-    // Other sliders (alpha and returns)
     ["alpha", "rz", "rh", "rA"].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) {
@@ -626,11 +633,12 @@
       update();
     });
 
-    // Initial computation
+    // Initial draw
     update();
   </script>
 </body>
 </html>
+
 
 
 

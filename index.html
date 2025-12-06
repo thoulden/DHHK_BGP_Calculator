@@ -116,6 +116,10 @@
       margin-top: 16px;
       margin-bottom: 8px;
       font-size: 0.95rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
     }
 
     /* Tooltip styles for the ⓘ next to "Results" */
@@ -215,11 +219,15 @@
         </div>
       </div>
 
-      <!-- Checkbox to edit returns to research -->
+      <!-- Checkboxes -->
       <div class="checkbox-row">
         <label>
           <input type="checkbox" id="editReturns" />
           Edit Returns to Research
+        </label>
+        <label>
+          <input type="checkbox" id="moveTogether" />
+          Move all <em>f</em> together
         </label>
       </div>
 
@@ -454,8 +462,6 @@
 
     // ------- UI / multipliers logic ---------
 
-    const sliders = ["fY", "fz", "fA", "fh", "alpha", "rz", "rh", "rA"];
-
     const values = {
       fY: document.getElementById("fY-value"),
       fz: document.getElementById("fz-value"),
@@ -470,15 +476,14 @@
     const ratioSpan = document.getElementById("ratio");
     const softSpan  = document.getElementById("soft-mult");
     const hardSpan  = document.getElementById("hard-mult");
-    const tfpSpan   = document.getElementById("tfp-mult");
     const statusDiv = document.getElementById("status");
     const editReturnsCheckbox = document.getElementById("editReturns");
+    const moveTogetherCheckbox = document.getElementById("moveTogether");
     const returnsSlidersDiv   = document.getElementById("returns-sliders");
 
-    function setSubMultipliers(soft, hard, tfp) {
+    function setSubMultipliers(soft, hard) {
       softSpan.textContent = soft;
       hardSpan.textContent = hard;
-      tfpSpan.textContent  = tfp;
     }
 
     function formatMultiplier(num, den) {
@@ -535,26 +540,25 @@
           !Number.isFinite(resCurrent.value) ||
           !Number.isFinite(resZero.value)) {
 
-        statusDiv.textContent = "System Explodes";
+        statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
 
-        // Apply your manual rules:
+        // Manual rules:
         // f_i = 0 => multiplier = 1.0000 ×
         // else => ∞ ×
         // Exception: if fA > 0 and fY = 0, output can vary (here: ∞ ×).
-        let outMult, softMult, hardMult, tfpMult;
+        let outMult, softMult, hardMult;
 
         if (fY === 0 && !(fTFP > 0 && fY === 0)) {
           outMult = "1.0000 ×";
         } else {
           outMult = "∞ ×";
         }
-        softMult = (fS === 0)   ? "1.0000 ×" : "∞ ×";
-        hardMult = (fH === 0)   ? "1.0000 ×" : "∞ ×";
-        tfpMult  = (fTFP === 0) ? "1.0000 ×" : "∞ ×";
+        softMult = (fS === 0) ? "1.0000 ×" : "∞ ×";
+        hardMult = (fH === 0) ? "1.0000 ×" : "∞ ×";
 
         ratioSpan.textContent = outMult;
-        setSubMultipliers(softMult, hardMult, tfpMult);
+        setSubMultipliers(softMult, hardMult);
         return;
       }
 
@@ -562,22 +566,19 @@
       let outMult = formatMultiplier(resCurrent.value, resZero.value);
       let softMult = "–";
       let hardMult = "–";
-      let tfpMult  = "–";
 
       if (resCurrent.gA && resZero.gA) {
         softMult = formatMultiplier(resCurrent.gA[0], resZero.gA[0]);
         hardMult = formatMultiplier(resCurrent.gA[1], resZero.gA[1]);
-        tfpMult  = formatMultiplier(resCurrent.gA[2], resZero.gA[2]);
+        // TFP multiplier exists in theory but is not displayed.
       }
 
       // Apply fi = 0 rules:
       // - If fS = 0 => software multiplier 1.0000 ×
       // - If fH = 0 => hardware multiplier 1.0000 ×
-      // - If fTFP = 0 => TFP multiplier 1.0000 ×
       // - If fY = 0 and NOT (fA > 0) => output multiplier 1.0000 ×
       if (fS === 0)   softMult = "1.0000 ×";
       if (fH === 0)   hardMult = "1.0000 ×";
-      if (fTFP === 0) tfpMult  = "1.0000 ×";
       if (fY === 0 && !(fTFP > 0 && fY === 0)) {
         outMult = "1.0000 ×";
       }
@@ -586,11 +587,34 @@
       statusDiv.className = "ok-status ok";
 
       ratioSpan.textContent = outMult;
-      setSubMultipliers(softMult, hardMult, tfpMult);
+      setSubMultipliers(softMult, hardMult);
     }
 
-    // Attach listeners
-    sliders.forEach(function (id) {
+    // --- slider listeners ---
+
+    // Helper: when "Move all f together" is on, moving any f slider syncs them all
+    function attachFSliderSync(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", function (e) {
+        if (moveTogetherCheckbox.checked) {
+          const v = e.target.value;
+          document.getElementById("fY").value = v;
+          document.getElementById("fz").value = v;
+          document.getElementById("fh").value = v;
+          document.getElementById("fA").value = v;
+        }
+        update();
+      });
+    }
+
+    attachFSliderSync("fY");
+    attachFSliderSync("fz");
+    attachFSliderSync("fh");
+    attachFSliderSync("fA");
+
+    // Other sliders (alpha and returns)
+    ["alpha", "rz", "rh", "rA"].forEach(function (id) {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener("input", update);
@@ -607,6 +631,7 @@
   </script>
 </body>
 </html>
+
 
 
 

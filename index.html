@@ -474,11 +474,12 @@
       const alpha = parseFloat(document.getElementById("alpha").value);
 
       // Update displayed numeric values for automation & alpha
-      values.fY.textContent = fY.toFixed(3);
-      values.fz.textContent = fz.toFixed(3);
-      values.fA.textContent = fA.toFixed(3);
-      values.fh.textContent = fh.toFixed(3);
-      values.alpha.textContent = alpha.toFixed(2);
+      values.fY.textContent = (fY * 100).toFixed(1) + "%";
+      values.fz.textContent = (fz * 100).toFixed(1) + "%";
+      values.fA.textContent = (fA * 100).toFixed(1) + "%";
+      values.fh.textContent = (fh * 100).toFixed(1) + "%";
+      values.alpha.textContent = alpha.toFixed(2); // leave alpha as-is unless you want %
+
 
       // Decide which returns to research to use
       const editReturns = editReturnsCheckbox.checked;

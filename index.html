@@ -465,6 +465,7 @@
       tfpSpan.textContent  = tfp;
     }
 
+    // Generic multiplier formatter (when math is defined)
     function formatMultiplier(num, den) {
       if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) {
         return "∞ ×";
@@ -479,12 +480,52 @@
       return r.toFixed(4) + " ×";
     }
 
+    function applyZeroFRules(fY, fS, fH, fTFP, outputMult, softMult, hardMult, tfpMult) {
+      // If f_i = 0, force multiplier to 1.0000 ×
+      // Exception: if fA > 0 and fY = 0, output multiplier may change.
+      if (fY === 0 && !(fTFP > 0 && fY === 0)) {
+        outputMult = "1.0000 ×";
+      }
+      if (fS === 0) {
+        softMult = "1.0000 ×";
+      }
+      if (fH === 0) {
+        hardMult = "1.0000 ×";
+      }
+      if (fTFP === 0) {
+        tfpMult = "1.0000 ×";
+      }
+      return { outputMult, softMult, hardMult, tfpMult };
+    }
+
+    function explosionMultipliers(fY, fS, fH, fTFP) {
+      // When the system truly explodes (no BGP, inverse fails):
+      // Apply your "fi=0 => multiplier=1" rule; otherwise ∞ ×.
+      let outputMult, softMult, hardMult, tfpMult;
+
+      if (fY === 0 && !(fTFP > 0 && fY === 0)) {
+        outputMult = "1.0000 ×";
+      } else {
+        outputMult = "∞ ×";
+      }
+
+      softMult = (fS === 0) ? "1.0000 ×" : "∞ ×";
+      hardMult = (fH === 0) ? "1.0000 ×" : "∞ ×";
+      tfpMult  = (fTFP === 0) ? "1.0000 ×" : "∞ ×";
+
+      return { outputMult, softMult, hardMult, tfpMult };
+    }
+
     function update() {
       const fY    = parseFloat(document.getElementById("fY").value);
       const fz    = parseFloat(document.getElementById("fz").value);  // software
       const fA    = parseFloat(document.getElementById("fA").value);  // TFP
       const fh    = parseFloat(document.getElementById("fh").value);  // hardware
       const alpha = parseFloat(document.getElementById("alpha").value);
+
+      const fS   = fz;
+      const fH   = fh;
+      const fTFP = fA;
 
       // Update displayed numeric values for automation & alpha
       values.fY.textContent = (fY * 100).toFixed(1) + "%";
@@ -516,56 +557,47 @@
         rA
       };
 
-      // Compute gy2 for current f's
+      // Compute gy2 & gA for current f's and for f=0 benchmark
       const resCurrent = computeGy2(fY, fz, fA, fh, alpha, paramSet);
-      // Compute gy2 for all f = 0 (benchmark), same r's and alpha
       const resZero    = computeGy2(0, 0, 0, 0, alpha, paramSet);
 
-      let ratioOk = resCurrent.ok && resZero.ok && resZero.value !== 0 &&
-                    Number.isFinite(resZero.value) && Number.isFinite(resCurrent.value);
-
-      if (!ratioOk) {
+      // If either solve fails (no BGP at all), use manual explosion rules.
+      if (!resCurrent.ok || !resZero.ok || !Number.isFinite(resCurrent.value) || !Number.isFinite(resZero.value)) {
         statusDiv.textContent = "System Explodes (no BGP)";
         statusDiv.className = "ok-status error";
-        ratioSpan.textContent = "∞ ×";
-        setSubMultipliers("∞ ×", "∞ ×", "∞ ×");
-        return;
-      }
 
-      const ratio = resCurrent.value / resZero.value;
+        const { outputMult, softMult, hardMult, tfpMult } =
+          explosionMultipliers(fY, fS, fH, fTFP);
 
-      if (!Number.isFinite(ratio)) {
-        statusDiv.textContent = "System Explodes (no BGP)";
-        statusDiv.className = "ok-status error";
-        ratioSpan.textContent = "∞ ×";
-        setSubMultipliers("∞ ×", "∞ ×", "∞ ×");
-        return;
-      }
-
-      // At this point, overall ratio is finite. Negative ratio = "explosive" output,
-      // but sector multipliers are still computed individually.
-      if (ratio < 0) {
-        statusDiv.textContent = "System Explodes (no BGP)";
-        statusDiv.className = "ok-status error";
-        ratioSpan.textContent = "∞ ×";
-      } else {
-        statusDiv.textContent = "System has a Balanced Growth Path.";
-        statusDiv.className = "ok-status ok";
-        ratioSpan.textContent = ratio.toFixed(4) + " ×";
-      }
-
-      // Component multipliers from g_A_BGP (order: software, hardware, TFP)
-      if (resCurrent.gA && resZero.gA) {
-        const softMult = formatMultiplier(resCurrent.gA[0], resZero.gA[0]);
-        const hardMult = formatMultiplier(resCurrent.gA[1], resZero.gA[1]);
-        const tfpMult  = formatMultiplier(resCurrent.gA[2], resZero.gA[2]);
+        ratioSpan.textContent = outputMult;
         setSubMultipliers(softMult, hardMult, tfpMult);
-      } else {
-        setSubMultipliers("–", "–", "–");
+        return;
       }
+
+      // Normal BGP case: compute ratios, then enforce fi=0 rules.
+      let outputMult = formatMultiplier(resCurrent.value, resZero.value);
+      let softMult = "–", hardMult = "–", tfpMult = "–";
+
+      if (resCurrent.gA && resZero.gA) {
+        softMult = formatMultiplier(resCurrent.gA[0], resZero.gA[0]); // S
+        hardMult = formatMultiplier(resCurrent.gA[1], resZero.gA[1]); // H
+        tfpMult  = formatMultiplier(resCurrent.gA[2], resZero.gA[2]); // A
+      }
+
+      // Apply your "fi=0 => 1.0000 ×" rule (with the fA>0 & fY=0 exception for output)
+      ({ outputMult, softMult, hardMult, tfpMult } =
+        applyZeroFRules(fY, fS, fH, fTFP, outputMult, softMult, hardMult, tfpMult));
+
+      // In the BGP case we just declare the system balanced.
+      statusDiv.textContent = "System has a Balanced Growth Path.";
+      statusDiv.className = "ok-status ok";
+
+      ratioSpan.textContent = outputMult;
+      setSubMultipliers(softMult, hardMult, tfpMult);
     }
 
     // Attach listeners
+    const sliders = ["fY", "fz", "fA", "fh", "alpha", "rz", "rh", "rA"];
     sliders.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
@@ -583,4 +615,5 @@
   </script>
 </body>
 </html>
+
 

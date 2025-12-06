@@ -7,15 +7,25 @@
   <line x1="10" y1="54" x2="10" y2="10" stroke="#555" stroke-width="2" />
 
   <!-- Green linear BGP line -->
-  <line x1="12" y1="50" x2="56" y2="24" stroke="#2ca24f" stroke-width="3" stroke-linecap="round" />
+  <line
+    x1="12" y1="50"
+    x2="56" y2="24"
+    stroke="#2ca24f"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
 
-  <!-- Red explosive, hyperbolic-looking curve -->
-  <!-- Stays low for most of the x-range, then shoots up near the right edge -->
-  <path d="
-    M 12 50
-    C 24 50, 32 48, 40 44
-    C 48 40, 54 32, 58 12
-  "
+  <!-- Red explosive, asymptote-like curve:
+       - Starts at same origin (12,50)
+       - Rises faster than green almost immediately
+       - Bends to the right, approaching a vertical-asymptote feel
+       - Ends midway along x-axis, at same height as top of y-axis (y=10) -->
+  <path
+    d="
+      M 12 50
+      C 18 46, 24 40, 28 32
+      S 36 18, 34 10
+    "
     fill="none"
     stroke="#d62828"
     stroke-width="3"

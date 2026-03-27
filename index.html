@@ -593,6 +593,24 @@
         outMult = "1.0000 ×";
       }
 
+      // If any displayed multiplier is still "-", the BGP is not well-defined
+      if (softMult === "-" || hardMult === "-") {
+        statusDiv.textContent = "System Explodes (no BGP)";
+        statusDiv.className = "ok-status error";
+
+        if (fS === 0) softMult = "1.0000 ×"; else softMult = "∞ ×";
+        if (fH === 0) hardMult = "1.0000 ×"; else hardMult = "∞ ×";
+        if (fY === 0 && !(fTFP > 0 && fY === 0)) {
+          outMult = "1.0000 ×";
+        } else {
+          outMult = "∞ ×";
+        }
+
+        ratioSpan.textContent = outMult;
+        setSubMultipliers(softMult, hardMult);
+        return;
+      }
+
       statusDiv.textContent = "System has a Balanced Growth Path.";
       statusDiv.className = "ok-status ok";
 

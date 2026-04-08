@@ -911,7 +911,7 @@
     }
 
     function simulateShock(p, fS, fH, fA, fY) {
-      const T_pre = 5, T_post = 40, g_thresh = 500;
+      const T_pre = 5, T_post = 40, g_thresh = 1e8;
       const bgp = p.bgp;
 
       // Pre-shock: integrate from -T_pre to 0 with f=0

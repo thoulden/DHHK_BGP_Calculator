@@ -161,6 +161,73 @@
       opacity: 1;
     }
 
+    /* Toggle bar */
+    .toggle-bar {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #0062CF;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      background: #fff;
+      color: #0062CF;
+      transition: background 0.2s, color 0.2s;
+    }
+    .toggle-btn.active {
+      background: #0062CF;
+      color: #fff;
+    }
+    .toggle-btn:hover:not(.active) {
+      background: #e8f0fe;
+    }
+
+    /* Simulator styles */
+    .sim-section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #444;
+      margin: 18px 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .sim-section-title:first-of-type {
+      margin-top: 0;
+    }
+    .plots-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .plot-container {
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 8px;
+    }
+    .plot-container canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .sim-status {
+      margin-top: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #555;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+    }
+
     @media (max-width: 700px) {
       .sliders {
         grid-template-columns: minmax(0, 1fr);
@@ -169,11 +236,22 @@
       .slider-alpha {
         grid-column: span 1;
       }
+      .plots-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Toggle bar -->
+    <div class="toggle-bar">
+      <button class="toggle-btn active" id="btn-calculator" onclick="switchView('calculator')">BGP Calculator</button>
+      <button class="toggle-btn" id="btn-simulator" onclick="switchView('simulator')">Simulator</button>
+    </div>
+
+    <!-- ============ BGP CALCULATOR VIEW ============ -->
+    <div id="view-calculator">
     <div class="card">
       <h1>Balanced vs Explosive Growth Path Calculator</h1>
       <p class="subtitle">
@@ -281,6 +359,83 @@
         </div>
       </div>
     </div>
+    </div> <!-- end view-calculator -->
+
+    <!-- ============ SIMULATOR VIEW ============ -->
+    <div id="view-simulator" style="display:none">
+    <div class="card">
+      <h1>Automation Shock Simulator</h1>
+      <p class="subtitle">
+        Simulate the growth rate dynamics after an automation shock.
+        Adjust researcher growth rates <strong>n</strong> and automation fractions <strong>f</strong>.
+      </p>
+
+      <div class="sim-section-title">Researcher / Labor Growth Rates</div>
+      <div class="sliders">
+        <div class="slider-group">
+          <label for="sim-nS">Software Researcher Growth (n<sub>S</sub>)</label>
+          <input type="range" id="sim-nS" min="0" max="3" step="0.01" value="1.10" />
+          <div class="value-display">Current: <span id="sim-nS-value">110.0%</span>/yr</div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-nH">Hardware Researcher Growth (n<sub>H</sub>)</label>
+          <input type="range" id="sim-nH" min="0" max="0.5" step="0.001" value="0.074" />
+          <div class="value-display">Current: <span id="sim-nH-value">7.4%</span>/yr</div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-nA">TFP Researcher Growth (n<sub>A</sub>)</label>
+          <input type="range" id="sim-nA" min="0" max="0.3" step="0.001" value="0.04" />
+          <div class="value-display">Current: <span id="sim-nA-value">4.0%</span>/yr</div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-nY">Output Labor Growth (n<sub>Y</sub>)</label>
+          <input type="range" id="sim-nY" min="0" max="0.1" step="0.001" value="0.01" />
+          <div class="value-display">Current: <span id="sim-nY-value">1.0%</span>/yr</div>
+        </div>
+      </div>
+
+      <div class="sim-section-title">Automation Shock (f)</div>
+      <div class="sliders">
+        <div class="slider-group">
+          <label for="sim-fS">Software Research Automation (f<sub>S</sub>)</label>
+          <input type="range" id="sim-fS" min="0" max="1" step="0.001" value="0.10" />
+          <div class="value-display">Current: <span id="sim-fS-value">10.0%</span></div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-fH">Hardware Research Automation (f<sub>H</sub>)</label>
+          <input type="range" id="sim-fH" min="0" max="1" step="0.001" value="0.10" />
+          <div class="value-display">Current: <span id="sim-fH-value">10.0%</span></div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-fA">TFP Research Automation (f<sub>A</sub>)</label>
+          <input type="range" id="sim-fA" min="0" max="1" step="0.001" value="0.10" />
+          <div class="value-display">Current: <span id="sim-fA-value">10.0%</span></div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-fY">Output Task Automation (f<sub>Y</sub>)</label>
+          <input type="range" id="sim-fY" min="0" max="1" step="0.001" value="0.10" />
+          <div class="value-display">Current: <span id="sim-fY-value">10.0%</span></div>
+        </div>
+      </div>
+
+      <div class="checkbox-row">
+        <label>
+          <input type="checkbox" id="sim-moveTogether" />
+          Move all <em>f</em> together
+        </label>
+      </div>
+
+      <div id="sim-status" class="sim-status"></div>
+
+      <div class="plots-grid">
+        <div class="plot-container"><canvas id="plot-gS" width="440" height="320"></canvas></div>
+        <div class="plot-container"><canvas id="plot-gH" width="440" height="320"></canvas></div>
+        <div class="plot-container"><canvas id="plot-gA" width="440" height="320"></canvas></div>
+        <div class="plot-container"><canvas id="plot-gY" width="440" height="320"></canvas></div>
+      </div>
+    </div>
+    </div> <!-- end view-simulator -->
+
   </div>
 
   <script>
@@ -654,6 +809,441 @@
 
     // Initial draw
     update();
+
+    // ===============================================================
+    // VIEW TOGGLE
+    // ===============================================================
+    function switchView(view) {
+      document.getElementById('view-calculator').style.display = view === 'calculator' ? '' : 'none';
+      document.getElementById('view-simulator').style.display  = view === 'simulator'  ? '' : 'none';
+      document.getElementById('btn-calculator').className = 'toggle-btn' + (view === 'calculator' ? ' active' : '');
+      document.getElementById('btn-simulator').className  = 'toggle-btn' + (view === 'simulator'  ? ' active' : '');
+      if (view === 'simulator') runSimulation();
+    }
+
+    // ===============================================================
+    // SIMULATION ENGINE (ported from Python)
+    // ===============================================================
+
+    function makeParams(nS, nH, nA, nY) {
+      const p = {
+        alpha: 0.6,
+        beta_S: 1.0, beta_H: 0.2, beta_A: 3.1,
+        lambda_S: 1.0, lambda_H: 1.0, lambda_A: 1.0,
+        delta_H: 0.30, delta_Y: 0.07,
+        KY_over_Y: 4.0,
+        ell_Y: 0.95, ell_S: 0.005, ell_H: 0.005, ell_A: 0.04,
+        kappa_Y: 0.95, kappa_S: 0.005, kappa_H: 0.005, kappa_A: 0.04,
+        n_Y: nY, n_S: nS, n_H: nH, n_A: nA,
+        L0: 1.0
+      };
+      p.r_S = p.lambda_S / p.beta_S;
+      p.r_H = p.lambda_H / p.beta_H;
+      p.r_A = p.lambda_A / p.beta_A;
+      return p;
+    }
+
+    function bgpGrowthRates(p) {
+      const gS = p.r_S * p.n_S;
+      const gH = p.r_H * p.n_H;
+      const gA = p.r_A * p.n_A;
+      const gY = gA / p.alpha + p.n_Y;
+      const gKH = gH + gY;
+      return { gS, gH, gA, gY, gKH };
+    }
+
+    function calibrateBGP(p) {
+      const bgp = bgpGrowthRates(p);
+      const Y0 = p.ell_Y * Math.pow(p.KY_over_Y, (1 - p.alpha) / p.alpha);
+      const KY0 = p.KY_over_Y * Y0;
+      const KH0 = p.ell_Y / p.kappa_Y;
+      p.KH_over_Y = KH0 / Y0;
+      p.nu_S = bgp.gS / Math.pow(p.ell_S, p.lambda_S);
+      p.nu_H = bgp.gH / Math.pow(p.ell_H, p.lambda_H);
+      p.nu_A = bgp.gA / Math.pow(p.ell_A, p.lambda_A);
+      p.s_Y = (bgp.gY + p.delta_Y) * KY0 / Y0;
+      p.s_H = (bgp.gKH + p.delta_H) * KH0 / Y0;
+      p.Y0 = Y0; p.KY0 = KY0; p.KH0 = KH0;
+      p.bgp = bgp;
+      return p;
+    }
+
+    function modelODE(t, state, p, fS, fH, fA, fY) {
+      const lnS = state[0], lnH = state[1], lnA = state[2], lnKH = state[3], lnKY = state[4];
+      const S = Math.exp(lnS), H = Math.exp(lnH), A = Math.exp(lnA);
+      const KH = Math.exp(lnKH), KY = Math.exp(lnKY);
+      const LY = p.ell_Y * p.L0 * Math.exp(p.n_Y * t);
+      const LS = p.ell_S * p.L0 * Math.exp(p.n_S * t);
+      const LH = p.ell_H * p.L0 * Math.exp(p.n_H * t);
+      const LA = p.ell_A * p.L0 * Math.exp(p.n_A * t);
+
+      function eff(Li, kappa, fi) {
+        const Ci = kappa * KH * S;
+        return fi > 0 ? Math.pow(Li, 1 - fi) * Math.pow(Ci, fi) : Li;
+      }
+
+      const LhatY = eff(LY, p.kappa_Y, fY);
+      const Y = A * Math.pow(LhatY, p.alpha) * Math.pow(KY, 1 - p.alpha);
+      const gS = p.nu_S * Math.pow(eff(LS, p.kappa_S, fS), p.lambda_S) * Math.pow(S, -p.beta_S);
+      const gH = p.nu_H * Math.pow(eff(LH, p.kappa_H, fH), p.lambda_H) * Math.pow(H, -p.beta_H);
+      const gA = p.nu_A * Math.pow(eff(LA, p.kappa_A, fA), p.lambda_A) * Math.pow(A, -p.beta_A);
+      const gKH = (p.s_H * H * Y - p.delta_H * KH) / KH;
+      const gKY = (p.s_Y * Y - p.delta_Y * KY) / KY;
+      return [gS, gH, gA, gKH, gKY];
+    }
+
+    // Fixed-step RK4 integrator
+    function rk4Step(f, t, y, h) {
+      const n = y.length;
+      const k1 = f(t, y);
+      const y2 = new Array(n);
+      for (let i = 0; i < n; i++) y2[i] = y[i] + 0.5 * h * k1[i];
+      const k2 = f(t + 0.5 * h, y2);
+      const y3 = new Array(n);
+      for (let i = 0; i < n; i++) y3[i] = y[i] + 0.5 * h * k2[i];
+      const k3 = f(t + 0.5 * h, y3);
+      const y4 = new Array(n);
+      for (let i = 0; i < n; i++) y4[i] = y[i] + h * k3[i];
+      const k4 = f(t + h, y4);
+      const yNext = new Array(n);
+      for (let i = 0; i < n; i++) yNext[i] = y[i] + (h / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+      return yNext;
+    }
+
+    function simulateShock(p, fS, fH, fA, fY) {
+      const T_pre = 5, T_post = 40, g_thresh = 500;
+      const bgp = p.bgp;
+
+      // Pre-shock: integrate from -T_pre to 0 with f=0
+      const x0_pre = [
+        -bgp.gS * T_pre,
+        -bgp.gH * T_pre,
+        -bgp.gA * T_pre,
+        Math.log(p.KH0) - bgp.gKH * T_pre,
+        Math.log(p.KY0) - bgp.gY * T_pre
+      ];
+
+      const dt_pre = 0.1;
+      const preSteps = Math.round(T_pre / dt_pre);
+      let t = -T_pre, state = x0_pre.slice();
+      const tArr = [], gSArr = [], gHArr = [], gAArr = [], gYArr = [];
+
+      // Collect pre-shock data
+      for (let step = 0; step <= preSteps; step++) {
+        const d = modelODE(t, state, p, 0, 0, 0, 0);
+        const gY_val = d[2] + p.alpha * p.n_Y + (1 - p.alpha) * d[4];
+        tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
+        if (step < preSteps) {
+          state = rk4Step((tt, ss) => modelODE(tt, ss, p, 0, 0, 0, 0), t, state, dt_pre);
+          t += dt_pre;
+        }
+      }
+
+      // Post-shock: integrate from 0 to T_post
+      const x0_post = [0, 0, 0, Math.log(p.KH0), Math.log(p.KY0)];
+      const dt_post = 0.02;
+      const maxPostSteps = Math.round(T_post / dt_post);
+      t = 0; state = x0_post.slice();
+      let singularity = null;
+
+      for (let step = 1; step <= maxPostSteps; step++) {
+        state = rk4Step((tt, ss) => modelODE(tt, ss, p, fS, fH, fA, fY), t, state, dt_post);
+        t += dt_post;
+
+        const d = modelODE(t, state, p, fS, fH, fA, fY);
+
+        // Compute gY properly
+        let g_LhatY;
+        if (fY > 0) {
+          g_LhatY = (1 - fY) * p.n_Y + fY * (d[3] + d[0]);
+        } else {
+          g_LhatY = p.n_Y;
+        }
+        const gY_val = d[2] + p.alpha * g_LhatY + (1 - p.alpha) * d[4];
+
+        tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
+
+        // Check for singularity / explosion
+        if (Math.max(d[0], d[1], d[2]) > g_thresh) {
+          // Estimate singularity time
+          if (tArr.length >= 2) {
+            const prev_t = tArr[tArr.length - 2];
+            const prev_gS = gSArr[gSArr.length - 2];
+            const cur_gS = d[0];
+            if (cur_gS > prev_gS && cur_gS > 0) {
+              const rate = (cur_gS - prev_gS) / (t - prev_t);
+              singularity = t + cur_gS / rate;
+            }
+          }
+          if (!singularity) singularity = t + 5;
+          break;
+        }
+
+        // Bail on NaN
+        if (!Number.isFinite(d[0]) || !Number.isFinite(d[1]) || !Number.isFinite(d[2])) {
+          singularity = t;
+          break;
+        }
+      }
+
+      return { t: tArr, gS: gSArr, gH: gHArr, gA: gAArr, gY: gYArr, singularity };
+    }
+
+    // ===============================================================
+    // CANVAS PLOT RENDERING
+    // ===============================================================
+
+    function drawPlot(canvasId, tData, gData, title, lineColor, singularity) {
+      const canvas = document.getElementById(canvasId);
+      const container = canvas.parentElement;
+      const dpr = window.devicePixelRatio || 1;
+      const w = container.clientWidth - 16; // account for padding
+      const h = Math.round(w * 0.73);
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      // Margins
+      const ml = 58, mr = 16, mt = 32, mb = 36;
+      const pw = w - ml - mr, ph = h - mt - mb;
+
+      // Background
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+
+      // Filter to positive growth rates only
+      const validIdx = [];
+      for (let i = 0; i < tData.length; i++) {
+        if (gData[i] > 0 && Number.isFinite(gData[i])) validIdx.push(i);
+      }
+      if (validIdx.length < 2) {
+        ctx.fillStyle = '#999';
+        ctx.font = '14px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText('No positive growth data', w / 2, h / 2);
+        ctx.fillText(title, w / 2, mt - 10);
+        return;
+      }
+
+      // X range: always -5 to 40
+      const xMin = -5, xMax = 40;
+
+      // Y range: auto-scale based on data (in %/yr)
+      let yMinRaw = Infinity, yMaxRaw = -Infinity;
+      for (const i of validIdx) {
+        const val = gData[i] * 100;
+        if (val < yMinRaw) yMinRaw = val;
+        if (val > yMaxRaw) yMaxRaw = val;
+      }
+      // Round to nice log powers
+      const logMin = Math.floor(Math.log10(Math.max(yMinRaw, 1e-6)));
+      const logMax = Math.ceil(Math.log10(Math.max(yMaxRaw, 1e-3)));
+      const yMin = Math.pow(10, logMin);
+      const yMax = Math.pow(10, Math.max(logMax, logMin + 1));
+
+      function xToPixel(x) { return ml + (x - xMin) / (xMax - xMin) * pw; }
+      function yToPixel(y) {
+        const logY = Math.log10(Math.max(y, yMin * 0.1));
+        const logRange = Math.log10(yMax) - Math.log10(yMin);
+        return mt + ph - (logY - Math.log10(yMin)) / logRange * ph;
+      }
+
+      // Grid lines (log scale)
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.lineWidth = 0.5;
+      ctx.fillStyle = '#888';
+      ctx.font = '11px system-ui';
+      ctx.textAlign = 'right';
+
+      for (let p = logMin; p <= logMax; p++) {
+        const yVal = Math.pow(10, p);
+        const py = yToPixel(yVal);
+        ctx.beginPath(); ctx.moveTo(ml, py); ctx.lineTo(ml + pw, py); ctx.stroke();
+        // Label
+        let label;
+        if (p >= 0) label = Math.pow(10, p).toFixed(0);
+        else label = Math.pow(10, p).toFixed(-p);
+        ctx.fillText(label, ml - 6, py + 4);
+
+        // Sub-grid at 2x and 5x
+        for (const mult of [2, 5]) {
+          const subVal = yVal * mult;
+          if (subVal < yMax) {
+            const spy = yToPixel(subVal);
+            ctx.strokeStyle = '#f0f0f0';
+            ctx.beginPath(); ctx.moveTo(ml, spy); ctx.lineTo(ml + pw, spy); ctx.stroke();
+            ctx.strokeStyle = '#e0e0e0';
+          }
+        }
+      }
+
+      // X-axis grid and labels
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#888';
+      for (let x = -5; x <= 40; x += 5) {
+        const px = xToPixel(x);
+        ctx.strokeStyle = '#e8e8e8';
+        ctx.beginPath(); ctx.moveTo(px, mt); ctx.lineTo(px, mt + ph); ctx.stroke();
+        ctx.fillText(x.toString(), px, mt + ph + 16);
+      }
+
+      // Shock line at t=0
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 4]);
+      const x0px = xToPixel(0);
+      ctx.beginPath(); ctx.moveTo(x0px, mt); ctx.lineTo(x0px, mt + ph); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Singularity line
+      if (singularity != null && singularity > 0 && singularity < xMax) {
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.4;
+        ctx.setLineDash([4, 4]);
+        const sx = xToPixel(singularity);
+        ctx.beginPath(); ctx.moveTo(sx, mt); ctx.lineTo(sx, mt + ph); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      }
+
+      // Plot the data line
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      let started = false;
+      for (const i of validIdx) {
+        const px = xToPixel(tData[i]);
+        const py = yToPixel(gData[i] * 100);
+        if (px < ml || px > ml + pw) continue;
+        if (py < mt || py > mt + ph) continue;
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Title
+      ctx.fillStyle = '#222';
+      ctx.font = 'bold 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(title, w / 2, mt - 10);
+
+      // Y-axis label
+      ctx.save();
+      ctx.translate(14, mt + ph / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = '#555';
+      ctx.font = '11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('%/yr', 0, 0);
+      ctx.restore();
+
+      // X-axis label
+      ctx.fillStyle = '#555';
+      ctx.font = '11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Years post shock', ml + pw / 2, h - 2);
+
+      // Border
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ml, mt, pw, ph);
+    }
+
+    // ===============================================================
+    // SIMULATOR UI WIRING
+    // ===============================================================
+
+    let simDebounceTimer = null;
+
+    function runSimulation() {
+      const nS = parseFloat(document.getElementById('sim-nS').value);
+      const nH = parseFloat(document.getElementById('sim-nH').value);
+      const nA = parseFloat(document.getElementById('sim-nA').value);
+      const nY = parseFloat(document.getElementById('sim-nY').value);
+      const fS = parseFloat(document.getElementById('sim-fS').value);
+      const fH = parseFloat(document.getElementById('sim-fH').value);
+      const fA = parseFloat(document.getElementById('sim-fA').value);
+      const fY = parseFloat(document.getElementById('sim-fY').value);
+
+      // Update display values
+      document.getElementById('sim-nS-value').textContent = (nS * 100).toFixed(1) + '%';
+      document.getElementById('sim-nH-value').textContent = (nH * 100).toFixed(1) + '%';
+      document.getElementById('sim-nA-value').textContent = (nA * 100).toFixed(1) + '%';
+      document.getElementById('sim-nY-value').textContent = (nY * 100).toFixed(1) + '%';
+      document.getElementById('sim-fS-value').textContent = (fS * 100).toFixed(1) + '%';
+      document.getElementById('sim-fH-value').textContent = (fH * 100).toFixed(1) + '%';
+      document.getElementById('sim-fA-value').textContent = (fA * 100).toFixed(1) + '%';
+      document.getElementById('sim-fY-value').textContent = (fY * 100).toFixed(1) + '%';
+
+      // Calibrate and simulate
+      const p = calibrateBGP(makeParams(nS, nH, nA, nY));
+
+      // Explosion condition
+      const ec = fY + fS * p.r_S + fH * p.r_H + fA * p.r_A / p.alpha;
+
+      const res = simulateShock(p, fS, fH, fA, fY);
+
+      // Status
+      const statusEl = document.getElementById('sim-status');
+      if (res.singularity != null) {
+        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
+          ' | Singularity ~ ' + res.singularity.toFixed(1) + ' years post-shock';
+        statusEl.style.background = '#fde8e7';
+        statusEl.style.borderColor = '#f5b5af';
+        statusEl.style.color = '#b02a1c';
+      } else {
+        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
+          ' | No singularity within 40 years';
+        statusEl.style.background = '#e6f6ea';
+        statusEl.style.borderColor = '#b8e2c4';
+        statusEl.style.color = '#1b6a32';
+      }
+
+      // Draw plots
+      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', res.singularity);
+      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', res.singularity);
+      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', res.singularity);
+      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', res.singularity);
+    }
+
+    function simUpdate() {
+      clearTimeout(simDebounceTimer);
+      simDebounceTimer = setTimeout(runSimulation, 50);
+    }
+
+    // Sync f sliders
+    function attachSimFSync(id) {
+      const el = document.getElementById(id);
+      el.addEventListener('input', function(e) {
+        if (document.getElementById('sim-moveTogether').checked) {
+          const v = e.target.value;
+          document.getElementById('sim-fS').value = v;
+          document.getElementById('sim-fH').value = v;
+          document.getElementById('sim-fA').value = v;
+          document.getElementById('sim-fY').value = v;
+        }
+        simUpdate();
+      });
+    }
+    attachSimFSync('sim-fS');
+    attachSimFSync('sim-fH');
+    attachSimFSync('sim-fA');
+    attachSimFSync('sim-fY');
+
+    ['sim-nS', 'sim-nH', 'sim-nA', 'sim-nY'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', simUpdate);
+    });
+
+    // Redraw on resize
+    window.addEventListener('resize', function() {
+      if (document.getElementById('view-simulator').style.display !== 'none') {
+        simUpdate();
+      }
+    });
   </script>
 </body>
 </html>

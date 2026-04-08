@@ -1187,33 +1187,29 @@
 
       const res = simulateShock(p, fS, fH, fA, fY);
 
-      // Status
+      // Status - red iff explosion condition > 1
       const statusEl = document.getElementById('sim-status');
-      if (res.singularity != null) {
-        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
-          ' | Singularity ~ ' + res.singularity.toFixed(1) + ' years post-shock';
-        statusEl.style.background = '#fde8e7';
-        statusEl.style.borderColor = '#f5b5af';
-        statusEl.style.color = '#b02a1c';
-      } else if (ec > 1) {
-        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
-          ' | Singularity > 40 years';
+      if (ec > 1) {
+        const singMsg = res.singularity != null
+          ? 'Singularity ~ ' + res.singularity.toFixed(1) + ' years post-shock'
+          : 'Singularity > 40 years';
+        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) + ' | ' + singMsg;
         statusEl.style.background = '#fde8e7';
         statusEl.style.borderColor = '#f5b5af';
         statusEl.style.color = '#b02a1c';
       } else {
-        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
-          ' | No singularity within 40 years';
+        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3);
         statusEl.style.background = '#e6f6ea';
         statusEl.style.borderColor = '#b8e2c4';
         statusEl.style.color = '#1b6a32';
       }
 
-      // Draw plots
-      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', res.singularity);
-      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', res.singularity);
-      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', res.singularity);
-      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', res.singularity);
+      // Draw plots - only show singularity line if EC > 1
+      const singLine = ec > 1 ? res.singularity : null;
+      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', singLine);
+      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', singLine);
+      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', singLine);
+      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', singLine);
     }
 
     function simUpdate() {

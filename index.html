@@ -1195,6 +1195,12 @@
         statusEl.style.background = '#fde8e7';
         statusEl.style.borderColor = '#f5b5af';
         statusEl.style.color = '#b02a1c';
+      } else if (ec > 1) {
+        statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
+          ' | Singularity > 40 years';
+        statusEl.style.background = '#fde8e7';
+        statusEl.style.borderColor = '#f5b5af';
+        statusEl.style.color = '#b02a1c';
       } else {
         statusEl.textContent = 'Explosion condition = ' + ec.toFixed(3) +
           ' | No singularity within 40 years';

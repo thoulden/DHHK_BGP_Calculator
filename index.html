@@ -189,6 +189,23 @@
       background: #e8f0fe;
     }
 
+    /* Reset button */
+    .reset-btn {
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f5f5f5;
+      color: #444;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .reset-btn:hover {
+      background: #e8e8e8;
+      border-color: #aaa;
+    }
+
     /* Simulator styles */
     .sim-section-title {
       font-size: 0.95rem;
@@ -246,12 +263,12 @@
   <div class="container">
     <!-- Toggle bar -->
     <div class="toggle-bar">
-      <button class="toggle-btn active" id="btn-calculator" onclick="switchView('calculator')">BGP Calculator</button>
-      <button class="toggle-btn" id="btn-simulator" onclick="switchView('simulator')">Simulator</button>
+      <button class="toggle-btn" id="btn-calculator" onclick="switchView('calculator')">BGP Calculator</button>
+      <button class="toggle-btn active" id="btn-simulator" onclick="switchView('simulator')">Simulator</button>
     </div>
 
     <!-- ============ BGP CALCULATOR VIEW ============ -->
-    <div id="view-calculator">
+    <div id="view-calculator" style="display:none">
     <div class="card">
       <h1>Balanced vs Explosive Growth Path Calculator</h1>
       <p class="subtitle">
@@ -263,22 +280,7 @@
 
       <!-- Automation & alpha sliders -->
       <div class="sliders">
-        <!-- ROW 1: alpha + output -->
-        <div class="slider-group slider-alpha">
-          <label for="alpha">Labor Share (1-α)</label>
-          <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
-          <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
-        </div>
-        
-        <div class="slider-group slider-output">
-          <label for="fY">
-            % Automation of Output Tasks (f<sub>Y</sub>)
-          </label>
-          <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
-          <div class="value-display">Current: <span id="fY-value">0%</span></div>
-        </div>
-
-        <!-- ROW 2: three tech sliders (software, hardware, TFP) -->
+        <!-- ROW 1: three tech sliders -->
         <div class="slider-group">
           <label for="fz">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
           <input type="range" id="fz" min="0" max="1" step="0.001" value="0" />
@@ -296,6 +298,19 @@
           <input type="range" id="fA" min="0" max="1" step="0.001" value="0" />
           <div class="value-display">Current: <span id="fA-value">0%</span></div>
         </div>
+
+        <!-- ROW 2: output (left) + alpha (right, wide) -->
+        <div class="slider-group slider-output">
+          <label for="fY">% Automation of Output Tasks (f<sub>Y</sub>)</label>
+          <input type="range" id="fY" min="0" max="1" step="0.001" value="0" />
+          <div class="value-display">Current: <span id="fY-value">0%</span></div>
+        </div>
+
+        <div class="slider-group slider-alpha">
+          <label for="alpha">Labor Share (1-α)</label>
+          <input type="range" id="alpha" min="0.01" max="0.99" step="0.01" value="0.60" />
+          <div class="value-display">Current: <span id="alpha-value">0.60</span></div>
+        </div>
       </div>
 
       <!-- Checkboxes -->
@@ -308,6 +323,7 @@
           <input type="checkbox" id="moveTogether" />
           Move all <em>f</em> together
         </label>
+        <button class="reset-btn" onclick="resetCalculator()">Reset to Defaults</button>
       </div>
 
       <!-- Returns to research sliders (hidden until checkbox is checked) -->
@@ -362,7 +378,7 @@
     </div> <!-- end view-calculator -->
 
     <!-- ============ SIMULATOR VIEW ============ -->
-    <div id="view-simulator" style="display:none">
+    <div id="view-simulator">
     <div class="card">
       <h1>Automation Shock Simulator</h1>
       <p class="subtitle">
@@ -397,22 +413,22 @@
       <div class="sim-section-title">Automation Shock (f)</div>
       <div class="sliders">
         <div class="slider-group">
-          <label for="sim-fS">Software Research Automation (f<sub>S</sub>)</label>
+          <label for="sim-fS">% Automation of Software Research Tasks (f<sub>S</sub>)</label>
           <input type="range" id="sim-fS" min="0" max="1" step="0.001" value="0.10" />
           <div class="value-display">Current: <span id="sim-fS-value">10.0%</span></div>
         </div>
         <div class="slider-group">
-          <label for="sim-fH">Hardware Research Automation (f<sub>H</sub>)</label>
+          <label for="sim-fH">% Automation of Hardware Research Tasks (f<sub>H</sub>)</label>
           <input type="range" id="sim-fH" min="0" max="1" step="0.001" value="0.10" />
           <div class="value-display">Current: <span id="sim-fH-value">10.0%</span></div>
         </div>
         <div class="slider-group">
-          <label for="sim-fA">TFP Research Automation (f<sub>A</sub>)</label>
+          <label for="sim-fA">% Automation of TFP Research Tasks (f<sub>A</sub>)</label>
           <input type="range" id="sim-fA" min="0" max="1" step="0.001" value="0.10" />
           <div class="value-display">Current: <span id="sim-fA-value">10.0%</span></div>
         </div>
         <div class="slider-group">
-          <label for="sim-fY">Output Task Automation (f<sub>Y</sub>)</label>
+          <label for="sim-fY">% Automation of Output Tasks (f<sub>Y</sub>)</label>
           <input type="range" id="sim-fY" min="0" max="1" step="0.001" value="0.10" />
           <div class="value-display">Current: <span id="sim-fY-value">10.0%</span></div>
         </div>
@@ -423,6 +439,30 @@
           <input type="checkbox" id="sim-moveTogether" />
           Move all <em>f</em> together
         </label>
+        <label>
+          <input type="checkbox" id="sim-editReturns" />
+          Edit Returns to Research
+        </label>
+        <button class="reset-btn" onclick="resetSimulator()">Reset to Defaults</button>
+      </div>
+
+      <!-- Returns to research sliders (hidden until checkbox is checked) -->
+      <div id="sim-returns-sliders" class="sliders" style="display:none; margin-top:8px;">
+        <div class="slider-group">
+          <label for="sim-rS">Return to Software Research (r<sub>S</sub>)</label>
+          <input type="range" id="sim-rS" min="0" max="10" step="0.01" value="1.00" />
+          <div class="value-display">Current: <span id="sim-rS-value">1.00</span></div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-rH">Return to Hardware Research (r<sub>H</sub>)</label>
+          <input type="range" id="sim-rH" min="0" max="10" step="0.01" value="5.00" />
+          <div class="value-display">Current: <span id="sim-rH-value">5.00</span></div>
+        </div>
+        <div class="slider-group">
+          <label for="sim-rA">Return to TFP Research (r<sub>A</sub>)</label>
+          <input type="range" id="sim-rA" min="0" max="10" step="0.01" value="0.32" />
+          <div class="value-display">Current: <span id="sim-rA-value">0.32</span></div>
+        </div>
       </div>
 
       <div id="sim-status" class="sim-status"></div>
@@ -825,7 +865,7 @@
     // SIMULATION ENGINE (ported from Python)
     // ===============================================================
 
-    function makeParams(nS, nH, nA, nY) {
+    function makeParams(nS, nH, nA, nY, customReturns) {
       const p = {
         alpha: 0.6,
         beta_S: 1.0, beta_H: 0.2, beta_A: 3.1,
@@ -837,6 +877,11 @@
         n_Y: nY, n_S: nS, n_H: nH, n_A: nA,
         L0: 1.0
       };
+      if (customReturns) {
+        p.beta_S = p.lambda_S / customReturns.rS;
+        p.beta_H = p.lambda_H / customReturns.rH;
+        p.beta_A = p.lambda_A / customReturns.rA;
+      }
       p.r_S = p.lambda_S / p.beta_S;
       p.r_H = p.lambda_H / p.beta_H;
       p.r_A = p.lambda_A / p.beta_A;
@@ -1125,11 +1170,34 @@
       }
       ctx.stroke();
 
-      // Title
+      // Title with subscript support: "Software (g" + subscript "S" + ")"
       ctx.fillStyle = '#222';
-      ctx.font = 'bold 14px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText(title, w / 2, mt - 10);
+      const titleY = mt - 10;
+      // Parse title like "Software (g_S)" into parts
+      const subMatch = title.match(/^(.+)\(g_([A-Z])\)$/);
+      if (subMatch) {
+        const prefix = subMatch[1] + '(g';
+        const sub = subMatch[2];
+        ctx.font = 'bold 14px system-ui';
+        const prefixW = ctx.measureText(prefix).width;
+        const subFont = 'bold 10px system-ui';
+        ctx.font = subFont;
+        const subW = ctx.measureText(sub).width;
+        ctx.font = 'bold 14px system-ui';
+        const closeW = ctx.measureText(')').width;
+        const totalW = prefixW + subW + closeW;
+        const startX = w / 2 - totalW / 2;
+        ctx.textAlign = 'left';
+        ctx.fillText(prefix, startX, titleY);
+        ctx.font = subFont;
+        ctx.fillText(sub, startX + prefixW, titleY + 3);
+        ctx.font = 'bold 14px system-ui';
+        ctx.fillText(')', startX + prefixW + subW, titleY);
+      } else {
+        ctx.font = 'bold 14px system-ui';
+        ctx.fillText(title, w / 2, titleY);
+      }
 
       // Y-axis label
       ctx.save();
@@ -1179,8 +1247,20 @@
       document.getElementById('sim-fA-value').textContent = (fA * 100).toFixed(1) + '%';
       document.getElementById('sim-fY-value').textContent = (fY * 100).toFixed(1) + '%';
 
+      // Returns to research
+      let customReturns = null;
+      if (document.getElementById('sim-editReturns').checked) {
+        const rS = parseFloat(document.getElementById('sim-rS').value);
+        const rH = parseFloat(document.getElementById('sim-rH').value);
+        const rA = parseFloat(document.getElementById('sim-rA').value);
+        document.getElementById('sim-rS-value').textContent = rS.toFixed(2);
+        document.getElementById('sim-rH-value').textContent = rH.toFixed(2);
+        document.getElementById('sim-rA-value').textContent = rA.toFixed(2);
+        customReturns = { rS, rH, rA };
+      }
+
       // Calibrate and simulate
-      const p = calibrateBGP(makeParams(nS, nH, nA, nY));
+      const p = calibrateBGP(makeParams(nS, nH, nA, nY, customReturns));
 
       // Explosion condition
       const ec = fY + fS * p.r_S + fH * p.r_H + fA * p.r_A / p.alpha;
@@ -1240,12 +1320,62 @@
       document.getElementById(id).addEventListener('input', simUpdate);
     });
 
+    // Simulator returns to research
+    ['sim-rS', 'sim-rH', 'sim-rA'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', simUpdate);
+    });
+
+    document.getElementById('sim-editReturns').addEventListener('change', function() {
+      document.getElementById('sim-returns-sliders').style.display = this.checked ? 'grid' : 'none';
+      simUpdate();
+    });
+
+    // ===============================================================
+    // RESET FUNCTIONS
+    // ===============================================================
+
+    function resetCalculator() {
+      document.getElementById('fz').value = 0;
+      document.getElementById('fh').value = 0;
+      document.getElementById('fA').value = 0;
+      document.getElementById('fY').value = 0;
+      document.getElementById('alpha').value = 0.60;
+      document.getElementById('rz').value = 1.00;
+      document.getElementById('rh').value = 5.00;
+      document.getElementById('rA').value = 0.32;
+      document.getElementById('editReturns').checked = false;
+      document.getElementById('moveTogether').checked = false;
+      returnsSlidersDiv.style.display = 'none';
+      update();
+    }
+
+    function resetSimulator() {
+      document.getElementById('sim-nS').value = 1.10;
+      document.getElementById('sim-nH').value = 0.074;
+      document.getElementById('sim-nA').value = 0.04;
+      document.getElementById('sim-nY').value = 0.01;
+      document.getElementById('sim-fS').value = 0.10;
+      document.getElementById('sim-fH').value = 0.10;
+      document.getElementById('sim-fA').value = 0.10;
+      document.getElementById('sim-fY').value = 0.10;
+      document.getElementById('sim-rS').value = 1.00;
+      document.getElementById('sim-rH').value = 5.00;
+      document.getElementById('sim-rA').value = 0.32;
+      document.getElementById('sim-moveTogether').checked = false;
+      document.getElementById('sim-editReturns').checked = false;
+      document.getElementById('sim-returns-sliders').style.display = 'none';
+      simUpdate();
+    }
+
     // Redraw on resize
     window.addEventListener('resize', function() {
       if (document.getElementById('view-simulator').style.display !== 'none') {
         simUpdate();
       }
     });
+
+    // Initial simulator draw
+    runSimulation();
   </script>
 </body>
 </html>

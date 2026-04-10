@@ -956,8 +956,9 @@
     }
 
     function simulateShock(p, fS, fH, fA, fY) {
-      // Singularity: any growth rate > 1e7 (i.e. 10^7 per year). Growth rates are in per-year units here.
-      const T_pre = 5, T_post = 40, g_thresh = 1e7;
+      // Singularity: stop as soon as any growth rate exceeds 10^7 %/yr.
+      // Growth rates here are in decimal per-year units, so the threshold is 1e5.
+      const T_pre = 5, T_post = 40, g_thresh = 1e5;
       const bgp = p.bgp;
 
       // Pre-shock: integrate from -T_pre to 0 with f=0
@@ -991,7 +992,6 @@
       const maxPostSteps = Math.round(T_post / dt_post);
       t = 0; state = x0_post.slice();
       let singularity = null;
-      let prevMax = 0;
 
       for (let step = 1; step <= maxPostSteps; step++) {
         state = rk4Step((tt, ss) => modelODE(tt, ss, p, fS, fH, fA, fY), t, state, dt_post);
@@ -1008,26 +1008,18 @@
         }
         const gY_val = d[2] + p.alpha * g_LhatY + (1 - p.alpha) * d[4];
 
-        const allFinite = Number.isFinite(d[0]) && Number.isFinite(d[1]) && Number.isFinite(d[2]) && Number.isFinite(d[3]) && Number.isFinite(d[4]) && Number.isFinite(gY_val);
-        const curMax = allFinite ? Math.max(d[0], d[1], d[2], gY_val) : NaN;
-
-        // RK4 overshoot detection: if we're already deep in the explosive regime
-        // and values suddenly collapse, that's numerical overshoot, not physics.
-        // Break without pushing the garbage point.
-        if (!allFinite || (prevMax > 10 && curMax < 0.1 * prevMax)) {
-          singularity = t;
+        // Bail on non-finite values without pushing the garbage point.
+        if (!Number.isFinite(d[0]) || !Number.isFinite(d[1]) || !Number.isFinite(d[2]) || !Number.isFinite(gY_val)) {
           break;
         }
 
         tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
 
-        // Simple singularity rule: stop once any growth rate exceeds 1e7
-        if (curMax > g_thresh) {
+        // Simple singularity rule: stop once any growth rate exceeds 10^7 %/yr.
+        if (Math.max(d[0], d[1], d[2], gY_val) > g_thresh) {
           singularity = t;
           break;
         }
-
-        prevMax = curMax;
       }
 
       return { t: tArr, gS: gSArr, gH: gHArr, gA: gAArr, gY: gYArr, singularity };

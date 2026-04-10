@@ -958,15 +958,15 @@
     function simulateShock(p, fS, fH, fA, fY) {
       // Singularity criterion: the *growth rate of the growth rate* goes super-exponential.
       // Concretely: d(log g)/dt > H_THRESH per year, i.e. the growth rate itself is
-      // doubling faster than every ln(2)/H_THRESH years. With H_THRESH = 1, that's
-      // "growth rate doubling faster than every ~8 months".
+      // doubling faster than every ln(2)/H_THRESH years. With H_THRESH = 6*ln(2) ~= 4.159,
+      // that's "growth rate doubling faster than every 2 months".
       //
       // Numerical profiling shows that for EC <= 1 the max of d(log g)/dt across the
       // four series (g_S, g_H, g_A, g_Y) never exceeds ~0.25/yr, while explosive runs
-      // cross 1/yr cleanly 1-2 years before the ODE hits RK4 overshoot -- so this
-      // stops the plots right before the numerical garbage and leaves mildly
+      // blow straight through 4 /yr cleanly before the ODE hits RK4 overshoot -- so
+      // this stops the plots right before the numerical garbage and leaves mildly
       // explosive (EC just above 1) cases correctly labeled "Singularity > 40 years".
-      const T_pre = 5, T_post = 40, H_THRESH = 1.0;
+      const T_pre = 5, T_post = 40, H_THRESH = 6 * Math.log(2);
       const bgp = p.bgp;
 
       // Pre-shock: integrate from -T_pre to 0 with f=0
@@ -1309,11 +1309,11 @@
         statusEl.style.color = '#1b6a32';
       }
 
-      // Draw plots (no singularity marker line - we just stop plotting at the threshold)
-      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', null);
-      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', null);
-      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', null);
-      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', null);
+      // Draw plots, with a dashed singularity marker if one was detected.
+      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', res.singularity);
+      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', res.singularity);
+      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', res.singularity);
+      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', res.singularity);
     }
 
     function simUpdate() {

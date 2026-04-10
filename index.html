@@ -991,6 +991,7 @@
       const maxPostSteps = Math.round(T_post / dt_post);
       t = 0; state = x0_post.slice();
       let singularity = null;
+      let prevMax = 0;
 
       for (let step = 1; step <= maxPostSteps; step++) {
         state = rk4Step((tt, ss) => modelODE(tt, ss, p, fS, fH, fA, fY), t, state, dt_post);
@@ -1007,19 +1008,26 @@
         }
         const gY_val = d[2] + p.alpha * g_LhatY + (1 - p.alpha) * d[4];
 
+        const allFinite = Number.isFinite(d[0]) && Number.isFinite(d[1]) && Number.isFinite(d[2]) && Number.isFinite(d[3]) && Number.isFinite(d[4]) && Number.isFinite(gY_val);
+        const curMax = allFinite ? Math.max(d[0], d[1], d[2], gY_val) : NaN;
+
+        // RK4 overshoot detection: if we're already deep in the explosive regime
+        // and values suddenly collapse, that's numerical overshoot, not physics.
+        // Break without pushing the garbage point.
+        if (!allFinite || (prevMax > 10 && curMax < 0.1 * prevMax)) {
+          singularity = t;
+          break;
+        }
+
         tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
 
         // Simple singularity rule: stop once any growth rate exceeds 1e7
-        if (Math.max(d[0], d[1], d[2], gY_val) > g_thresh) {
+        if (curMax > g_thresh) {
           singularity = t;
           break;
         }
 
-        // Bail on NaN
-        if (!Number.isFinite(d[0]) || !Number.isFinite(d[1]) || !Number.isFinite(d[2])) {
-          singularity = t;
-          break;
-        }
+        prevMax = curMax;
       }
 
       return { t: tArr, gS: gSArr, gH: gHArr, gA: gAArr, gY: gYArr, singularity };

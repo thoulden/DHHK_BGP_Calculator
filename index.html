@@ -441,7 +441,7 @@
         </label>
         <label>
           <input type="checkbox" id="sim-editReturns" />
-          Edit Returns to Research and Depreciation Rates
+          Edit Returns to Research
         </label>
         <button class="reset-btn" onclick="resetSimulator()">Reset to Defaults</button>
       </div>
@@ -462,16 +462,6 @@
           <label for="sim-rA">Return to TFP Research (r<sub>A</sub>)</label>
           <input type="range" id="sim-rA" min="0" max="10" step="0.01" value="0.32" />
           <div class="value-display">Current: <span id="sim-rA-value">0.32</span></div>
-        </div>
-        <div class="slider-group">
-          <label for="sim-deltaY">Output Capital Depreciation (δ<sub>Y</sub>)</label>
-          <input type="range" id="sim-deltaY" min="0" max="0.3" step="0.001" value="0.07" />
-          <div class="value-display">Current: <span id="sim-deltaY-value">7.0%</span></div>
-        </div>
-        <div class="slider-group">
-          <label for="sim-deltaH">Hardware Capital Depreciation (δ<sub>H</sub>)</label>
-          <input type="range" id="sim-deltaH" min="0" max="0.6" step="0.001" value="0.30" />
-          <div class="value-display">Current: <span id="sim-deltaH-value">30.0%</span></div>
         </div>
       </div>
 
@@ -891,8 +881,6 @@
         p.beta_S = p.lambda_S / customReturns.rS;
         p.beta_H = p.lambda_H / customReturns.rH;
         p.beta_A = p.lambda_A / customReturns.rA;
-        if (customReturns.deltaY != null) p.delta_Y = customReturns.deltaY;
-        if (customReturns.deltaH != null) p.delta_H = customReturns.deltaH;
       }
       p.r_S = p.lambda_S / p.beta_S;
       p.r_H = p.lambda_H / p.beta_H;
@@ -968,7 +956,8 @@
     }
 
     function simulateShock(p, fS, fH, fA, fY) {
-      const T_pre = 5, T_post = 40, g_thresh = 1e8;
+      // Singularity: any growth rate > 1e7 (i.e. 10^7 per year). Growth rates are in per-year units here.
+      const T_pre = 5, T_post = 40, g_thresh = 1e7;
       const bgp = p.bgp;
 
       // Pre-shock: integrate from -T_pre to 0 with f=0
@@ -1020,19 +1009,9 @@
 
         tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
 
-        // Check for singularity / explosion
-        if (Math.max(d[0], d[1], d[2]) > g_thresh) {
-          // Estimate singularity time
-          if (tArr.length >= 2) {
-            const prev_t = tArr[tArr.length - 2];
-            const prev_gS = gSArr[gSArr.length - 2];
-            const cur_gS = d[0];
-            if (cur_gS > prev_gS && cur_gS > 0) {
-              const rate = (cur_gS - prev_gS) / (t - prev_t);
-              singularity = t + cur_gS / rate;
-            }
-          }
-          if (!singularity) singularity = t + 5;
+        // Simple singularity rule: stop once any growth rate exceeds 1e7
+        if (Math.max(d[0], d[1], d[2], gY_val) > g_thresh) {
+          singularity = t;
           break;
         }
 
@@ -1265,14 +1244,10 @@
         const rS = parseFloat(document.getElementById('sim-rS').value);
         const rH = parseFloat(document.getElementById('sim-rH').value);
         const rA = parseFloat(document.getElementById('sim-rA').value);
-        const deltaY = parseFloat(document.getElementById('sim-deltaY').value);
-        const deltaH = parseFloat(document.getElementById('sim-deltaH').value);
         document.getElementById('sim-rS-value').textContent = rS.toFixed(2);
         document.getElementById('sim-rH-value').textContent = rH.toFixed(2);
         document.getElementById('sim-rA-value').textContent = rA.toFixed(2);
-        document.getElementById('sim-deltaY-value').textContent = (deltaY * 100).toFixed(1) + '%';
-        document.getElementById('sim-deltaH-value').textContent = (deltaH * 100).toFixed(1) + '%';
-        customReturns = { rS, rH, rA, deltaY, deltaH };
+        customReturns = { rS, rH, rA };
       }
 
       // Calibrate and simulate
@@ -1300,12 +1275,11 @@
         statusEl.style.color = '#1b6a32';
       }
 
-      // Draw plots - only show singularity line if EC > 1
-      const singLine = ec > 1 ? res.singularity : null;
-      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', singLine);
-      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', singLine);
-      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', singLine);
-      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', singLine);
+      // Draw plots (no singularity marker line - we just stop plotting at the threshold)
+      drawPlot('plot-gS', res.t, res.gS, 'Software (g_S)', '#0062CF', null);
+      drawPlot('plot-gH', res.t, res.gH, 'Hardware (g_H)', '#E67E00', null);
+      drawPlot('plot-gA', res.t, res.gA, 'General TFP (g_A)', '#009952', null);
+      drawPlot('plot-gY', res.t, res.gY, 'Output (g_Y)', '#9A38A1', null);
     }
 
     function simUpdate() {
@@ -1337,7 +1311,7 @@
     });
 
     // Simulator returns to research
-    ['sim-rS', 'sim-rH', 'sim-rA', 'sim-deltaY', 'sim-deltaH'].forEach(function(id) {
+    ['sim-rS', 'sim-rH', 'sim-rA'].forEach(function(id) {
       document.getElementById(id).addEventListener('input', simUpdate);
     });
 
@@ -1377,8 +1351,6 @@
       document.getElementById('sim-rS').value = 1.00;
       document.getElementById('sim-rH').value = 5.00;
       document.getElementById('sim-rA').value = 0.32;
-      document.getElementById('sim-deltaY').value = 0.07;
-      document.getElementById('sim-deltaH').value = 0.30;
       document.getElementById('sim-moveTogether').checked = false;
       document.getElementById('sim-editReturns').checked = false;
       document.getElementById('sim-returns-sliders').style.display = 'none';

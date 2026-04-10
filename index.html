@@ -956,9 +956,17 @@
     }
 
     function simulateShock(p, fS, fH, fA, fY) {
-      // Singularity: stop as soon as any growth rate exceeds 10^7 %/yr.
-      // Growth rates here are in decimal per-year units, so the threshold is 1e5.
-      const T_pre = 5, T_post = 40, g_thresh = 1e5;
+      // Singularity criterion: the *growth rate of the growth rate* goes super-exponential.
+      // Concretely: d(log g)/dt > H_THRESH per year, i.e. the growth rate itself is
+      // doubling faster than every ln(2)/H_THRESH years. With H_THRESH = 1, that's
+      // "growth rate doubling faster than every ~8 months".
+      //
+      // Numerical profiling shows that for EC <= 1 the max of d(log g)/dt across the
+      // four series (g_S, g_H, g_A, g_Y) never exceeds ~0.25/yr, while explosive runs
+      // cross 1/yr cleanly 1-2 years before the ODE hits RK4 overshoot -- so this
+      // stops the plots right before the numerical garbage and leaves mildly
+      // explosive (EC just above 1) cases correctly labeled "Singularity > 40 years".
+      const T_pre = 5, T_post = 40, H_THRESH = 1.0;
       const bgp = p.bgp;
 
       // Pre-shock: integrate from -T_pre to 0 with f=0
@@ -993,6 +1001,17 @@
       t = 0; state = x0_post.slice();
       let singularity = null;
 
+      // Seed d_prev/gY_prev with the initial post-shock growth rates (at t=0+, with
+      // automation fractions applied). We don't push this point -- the pre-shock
+      // buffer already has t=0 with f=0 -- but we need it as the anchor for
+      // computing d(log g)/dt on the first post-shock step.
+      let d_prev = modelODE(0, state, p, fS, fH, fA, fY);
+      let gY_prev;
+      {
+        const g_LhatY0 = fY > 0 ? (1 - fY) * p.n_Y + fY * (d_prev[3] + d_prev[0]) : p.n_Y;
+        gY_prev = d_prev[2] + p.alpha * g_LhatY0 + (1 - p.alpha) * d_prev[4];
+      }
+
       for (let step = 1; step <= maxPostSteps; step++) {
         state = rk4Step((tt, ss) => modelODE(tt, ss, p, fS, fH, fA, fY), t, state, dt_post);
         t += dt_post;
@@ -1008,18 +1027,33 @@
         }
         const gY_val = d[2] + p.alpha * g_LhatY + (1 - p.alpha) * d[4];
 
-        // Bail on non-finite values without pushing the garbage point.
+        // Bail on non-finite values without pushing the garbage point and without
+        // declaring a singularity (a mildly explosive run that hits a numerical
+        // wall should still say "Singularity > 40 years", not report a fake date).
         if (!Number.isFinite(d[0]) || !Number.isFinite(d[1]) || !Number.isFinite(d[2]) || !Number.isFinite(gY_val)) {
           break;
         }
 
         tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
 
-        // Simple singularity rule: stop once any growth rate exceeds 10^7 %/yr.
-        if (Math.max(d[0], d[1], d[2], gY_val) > g_thresh) {
-          singularity = t;
-          break;
+        // Growth-rate-of-growth-rate check: for each of the four series, backward
+        // difference of log g over one dt_post step gives d(log g)/dt in /yr.
+        // If any series has its growth rate doubling faster than every ln(2)/H_THRESH
+        // years, call that the singularity.
+        if (d_prev[0] > 0 && d[0] > 0 && d_prev[1] > 0 && d[1] > 0 &&
+            d_prev[2] > 0 && d[2] > 0 && gY_prev > 0 && gY_val > 0) {
+          const hS = (Math.log(d[0])    - Math.log(d_prev[0])) / dt_post;
+          const hH = (Math.log(d[1])    - Math.log(d_prev[1])) / dt_post;
+          const hA = (Math.log(d[2])    - Math.log(d_prev[2])) / dt_post;
+          const hY = (Math.log(gY_val)  - Math.log(gY_prev))   / dt_post;
+          if (Math.max(hS, hH, hA, hY) > H_THRESH) {
+            singularity = t;
+            break;
+          }
         }
+
+        d_prev = d;
+        gY_prev = gY_val;
       }
 
       return { t: tArr, gS: gSArr, gH: gHArr, gA: gAArr, gY: gYArr, singularity };

@@ -440,6 +440,10 @@
           Move all <em>f</em> together
         </label>
         <label>
+          <input type="checkbox" id="sim-laborRealloc" />
+          Labor Reallocation
+        </label>
+        <label>
           <input type="checkbox" id="sim-editReturns" />
           Edit Returns to Research
         </label>
@@ -913,25 +917,41 @@
       return p;
     }
 
-    function modelODE(t, state, p, fS, fH, fA, fY) {
+    function modelODE(t, state, p, fS, fH, fA, fY, laborRealloc) {
       const lnS = state[0], lnH = state[1], lnA = state[2], lnKH = state[3], lnKY = state[4];
-      const S = Math.exp(lnS), H = Math.exp(lnH), A = Math.exp(lnA);
-      const KH = Math.exp(lnKH), KY = Math.exp(lnKY);
-      const LY = p.ell_Y * p.L0 * Math.exp(p.n_Y * t);
-      const LS = p.ell_S * p.L0 * Math.exp(p.n_S * t);
-      const LH = p.ell_H * p.L0 * Math.exp(p.n_H * t);
-      const LA = p.ell_A * p.L0 * Math.exp(p.n_A * t);
 
-      function eff(Li, kappa, fi) {
-        const Ci = kappa * KH * S;
-        return fi > 0 ? Math.pow(Li, 1 - fi) * Math.pow(Ci, fi) : Li;
+      // Log labor supplies
+      const lnLY = Math.log(p.ell_Y * p.L0) + p.n_Y * t;
+      const lnLS = Math.log(p.ell_S * p.L0) + p.n_S * t;
+      const lnLH = Math.log(p.ell_H * p.L0) + p.n_H * t;
+      const lnLA = Math.log(p.ell_A * p.L0) + p.n_A * t;
+
+      // Log effective labor: ln(L^{1-f} C^f) with optional [f^f(1-f)^{1-f}]^{-1} norm
+      function lnEff(lnL, kappa, fi) {
+        if (fi <= 0) return lnL;
+        const lnC = Math.log(kappa) + lnKH + lnS;
+        let val = (1 - fi) * lnL + fi * lnC;
+        if (laborRealloc && fi > 0 && fi < 1) {
+          val -= fi * Math.log(fi) + (1 - fi) * Math.log(1 - fi);
+        }
+        return val;
       }
 
-      const LhatY = eff(LY, p.kappa_Y, fY);
-      const Y = A * Math.pow(LhatY, p.alpha) * Math.pow(KY, 1 - p.alpha);
-      const gS = p.nu_S * Math.pow(eff(LS, p.kappa_S, fS), p.lambda_S) * Math.pow(S, -p.beta_S);
-      const gH = p.nu_H * Math.pow(eff(LH, p.kappa_H, fH), p.lambda_H) * Math.pow(H, -p.beta_H);
-      const gA = p.nu_A * Math.pow(eff(LA, p.kappa_A, fA), p.lambda_A) * Math.pow(A, -p.beta_A);
+      const lnLhatS = lnEff(lnLS, p.kappa_S, fS);
+      const lnLhatH = lnEff(lnLH, p.kappa_H, fH);
+      const lnLhatA = lnEff(lnLA, p.kappa_A, fA);
+      const lnLhatY = lnEff(lnLY, p.kappa_Y, fY);
+
+      // Research growth rates: g_i = nu_i * exp(lambda_i * lnLhat_i - beta_i * lnX_i)
+      const gS = p.nu_S * Math.exp(p.lambda_S * lnLhatS - p.beta_S * lnS);
+      const gH = p.nu_H * Math.exp(p.lambda_H * lnLhatH - p.beta_H * lnH);
+      const gA = p.nu_A * Math.exp(p.lambda_A * lnLhatA - p.beta_A * lnA);
+
+      // Output: Y = A * Lhat_Y^alpha * KY^{1-alpha}
+      const lnY = lnA + p.alpha * lnLhatY + (1 - p.alpha) * lnKY;
+      const Y = Math.exp(lnY);
+      const H = Math.exp(lnH), KH = Math.exp(lnKH), KY = Math.exp(lnKY);
+
       const gKH = (p.s_H * H * Y - p.delta_H * KH) / KH;
       const gKY = (p.s_Y * Y - p.delta_Y * KY) / KY;
       return [gS, gH, gA, gKH, gKY];
@@ -955,7 +975,7 @@
       return yNext;
     }
 
-    function simulateShock(p, fS, fH, fA, fY) {
+    function simulateShock(p, fS, fH, fA, fY, laborRealloc) {
       // Singularity criterion: the *growth rate of the growth rate* goes super-exponential.
       // Concretely: d(log g)/dt > H_THRESH per year, i.e. the growth rate itself is
       // doubling faster than every ln(2)/H_THRESH years. With H_THRESH = 6*ln(2) ~= 4.159,
@@ -985,11 +1005,11 @@
 
       // Collect pre-shock data
       for (let step = 0; step <= preSteps; step++) {
-        const d = modelODE(t, state, p, 0, 0, 0, 0);
+        const d = modelODE(t, state, p, 0, 0, 0, 0, false);
         const gY_val = d[2] + p.alpha * p.n_Y + (1 - p.alpha) * d[4];
         tArr.push(t); gSArr.push(d[0]); gHArr.push(d[1]); gAArr.push(d[2]); gYArr.push(gY_val);
         if (step < preSteps) {
-          state = rk4Step((tt, ss) => modelODE(tt, ss, p, 0, 0, 0, 0), t, state, dt_pre);
+          state = rk4Step((tt, ss) => modelODE(tt, ss, p, 0, 0, 0, 0, false), t, state, dt_pre);
           t += dt_pre;
         }
       }
@@ -1005,7 +1025,7 @@
       // automation fractions applied). We don't push this point -- the pre-shock
       // buffer already has t=0 with f=0 -- but we need it as the anchor for
       // computing d(log g)/dt on the first post-shock step.
-      let d_prev = modelODE(0, state, p, fS, fH, fA, fY);
+      let d_prev = modelODE(0, state, p, fS, fH, fA, fY, laborRealloc);
       let gY_prev;
       {
         const g_LhatY0 = fY > 0 ? (1 - fY) * p.n_Y + fY * (d_prev[3] + d_prev[0]) : p.n_Y;
@@ -1013,10 +1033,10 @@
       }
 
       for (let step = 1; step <= maxPostSteps; step++) {
-        state = rk4Step((tt, ss) => modelODE(tt, ss, p, fS, fH, fA, fY), t, state, dt_post);
+        state = rk4Step((tt, ss) => modelODE(tt, ss, p, fS, fH, fA, fY, laborRealloc), t, state, dt_post);
         t += dt_post;
 
-        const d = modelODE(t, state, p, fS, fH, fA, fY);
+        const d = modelODE(t, state, p, fS, fH, fA, fY, laborRealloc);
 
         // Compute gY properly
         let g_LhatY;
@@ -1286,11 +1306,26 @@
 
       // Calibrate and simulate
       const p = calibrateBGP(makeParams(nS, nH, nA, nY, customReturns));
+      const laborRealloc = document.getElementById('sim-laborRealloc').checked;
+
+      // When labor reallocation normalization is on, recalibrate kappa so that
+      // C_i(0) is set to make Lhat_i(0) = L_i(0), preventing a level jump at t=0.
+      // Formula: kappa_i = ell_i * f_i * (1-f_i)^{(1-f_i)/f_i} when KH0*S0 = 1.
+      if (laborRealloc) {
+        var recalKappa = function(ell, fi) {
+          if (fi <= 0 || fi >= 1) return ell;
+          return ell * fi * Math.pow(1 - fi, (1 - fi) / fi);
+        };
+        p.kappa_S = recalKappa(p.ell_S, fS);
+        p.kappa_H = recalKappa(p.ell_H, fH);
+        p.kappa_A = recalKappa(p.ell_A, fA);
+        p.kappa_Y = recalKappa(p.ell_Y, fY);
+      }
 
       // Explosion condition
       const ec = fY + fS * p.r_S + fH * p.r_H + fA * p.r_A / p.alpha;
 
-      const res = simulateShock(p, fS, fH, fA, fY);
+      const res = simulateShock(p, fS, fH, fA, fY, laborRealloc);
 
       // Status - red iff explosion condition > 1
       const statusEl = document.getElementById('sim-status');
@@ -1349,6 +1384,8 @@
       document.getElementById(id).addEventListener('input', simUpdate);
     });
 
+    document.getElementById('sim-laborRealloc').addEventListener('change', simUpdate);
+
     document.getElementById('sim-editReturns').addEventListener('change', function() {
       document.getElementById('sim-returns-sliders').style.display = this.checked ? 'grid' : 'none';
       simUpdate();
@@ -1386,6 +1423,7 @@
       document.getElementById('sim-rH').value = 5.00;
       document.getElementById('sim-rA').value = 0.32;
       document.getElementById('sim-moveTogether').checked = false;
+      document.getElementById('sim-laborRealloc').checked = false;
       document.getElementById('sim-editReturns').checked = false;
       document.getElementById('sim-returns-sliders').style.display = 'none';
       simUpdate();

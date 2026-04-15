@@ -1308,20 +1308,6 @@
       const p = calibrateBGP(makeParams(nS, nH, nA, nY, customReturns));
       const laborRealloc = document.getElementById('sim-laborRealloc').checked;
 
-      // When labor reallocation normalization is on, recalibrate kappa so that
-      // C_i(0) is set to make Lhat_i(0) = L_i(0), preventing a level jump at t=0.
-      // Formula: kappa_i = ell_i * f_i * (1-f_i)^{(1-f_i)/f_i} when KH0*S0 = 1.
-      if (laborRealloc) {
-        var recalKappa = function(ell, fi) {
-          if (fi <= 0 || fi >= 1) return ell;
-          return ell * fi * Math.pow(1 - fi, (1 - fi) / fi);
-        };
-        p.kappa_S = recalKappa(p.ell_S, fS);
-        p.kappa_H = recalKappa(p.ell_H, fH);
-        p.kappa_A = recalKappa(p.ell_A, fA);
-        p.kappa_Y = recalKappa(p.ell_Y, fY);
-      }
-
       // Explosion condition
       const ec = fY + fS * p.r_S + fH * p.r_H + fA * p.r_A / p.alpha;
 
